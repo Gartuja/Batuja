@@ -1,0 +1,12 @@
+# Local configs and history
+*.ini
+scratch/
+procs.txt
+
+# Visual Studio / compiler temporary artifacts
+*.pdb
+*.suo
+*.user
+[Bb]in/
+[Oo]bj/
+.vs/
