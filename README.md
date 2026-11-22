@@ -6,9 +6,8 @@ Aplicativo projetado para monitorar a porcentagem de bateria dos seus dispositiv
 
 ## Principais Funcionalidades
 
-- **Sobreposição na Tela (HUD Overlay para Jogos e Vídeos em Tela Cheia) 🎮:**
+- **Sobreposição na Tela (HUD Overlay para Jogos e Vídeos em Tela Cheia) :**
   - Inspirado na sobreposição de desempenho do Windows (Windows + G / Xbox Game Bar).
-  - Janela flutuante não-intrusiva (`WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW`) que fica sempre no topo de **jogos em tela cheia (borderless/fullscreen)** e reprodutores de mídia sem roubar foco nem minimizar a aplicação.
   - **Bateria em Segmentos**: Design de bateria com contorno arredondado, polo positivo e barras verticais internas proporcionais à carga, acompanhado do ícone do dispositivo, porcentagem em tempo real e indicador de carregamento (⚡).
   - **Customizável**: Arraste para qualquer canto da tela (posição salva automaticamente), alterne entre orientação Horizontal e Vertical, ajuste opacidade (100% a 45%) ou bloqueie a posição.
 
@@ -18,7 +17,7 @@ Aplicativo projetado para monitorar a porcentagem de bateria dos seus dispositiv
   - Dispositivos desligados saem automaticamente da bandeja e da tela principal para não poluir sua visualização.
   - Opção de ligar/desligar individualmente o ícone de qualquer periférico na bandeja via botão **`● Ícone Ligado` / `○ Ícone Desligado`**.
   - 
-- **Histórico de Dispositivos Sem Fio 📋:**
+- **Histórico de Dispositivos Sem Fio :**
   - Painel com registro persistente de todos os dispositivos sem fio que já foram conectados durante o uso do Batuja.
   - Mostra status em tempo real (**● Conectado** ou **○ Desligado**), protocolo, data/hora da última conexão e última porcentagem de carga registrada.
 
