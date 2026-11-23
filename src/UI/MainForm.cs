@@ -79,7 +79,7 @@ namespace OmniBattery.UI
             if (isVisible)
             {
                 _btnOverlay.Text = I18n.T("BtnOverlayActive");
-                _btnOverlay.BaseGlassColor = Color.FromArgb(46, 180, 100);
+                _btnOverlay.BaseGlassColor = Color.FromArgb(30, 75, 50);
                 _btnOverlay.AccentColor = Color.FromArgb(46, 220, 113);
                 _btnOverlay.UseAccentBorder = true;
                 _btnOverlay.ForeColor = Color.White;
@@ -87,7 +87,7 @@ namespace OmniBattery.UI
             else
             {
                 _btnOverlay.Text = I18n.T("BtnOverlay");
-                _btnOverlay.BaseGlassColor = Color.FromArgb(42, 48, 70);
+                _btnOverlay.BaseGlassColor = Color.FromArgb(36, 42, 64);
                 _btnOverlay.AccentColor = Color.FromArgb(88, 101, 242);
                 _btnOverlay.UseAccentBorder = false;
                 _btnOverlay.ForeColor = Color.White;
@@ -174,44 +174,44 @@ namespace OmniBattery.UI
             bool isAdmin = IsRunningAsAdmin();
             if (!isAdmin)
             {
-                _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(80, 35, 45));
-                _btnAdmin.Size = new Size(76, 32);
+                _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(75, 30, 42));
+                _btnAdmin.Size = new Size(80, 34);
                 _btnAdmin.Font = new Font("Segoe UI", 8.5f, FontStyle.Bold);
-                _btnAdmin.ForeColor = Color.FromArgb(255, 120, 120);
+                _btnAdmin.ForeColor = Color.FromArgb(255, 130, 130);
                 _btnAdmin.AccentColor = Color.FromArgb(255, 90, 90);
                 _btnAdmin.UseAccentBorder = true;
                 _btnAdmin.Click += OnRestartAsAdmin;
                 _headerPanel.Controls.Add(_btnAdmin);
             }
 
-            _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(42, 48, 70));
-            _btnBackground.Size = new Size(84, 32);
+            _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(36, 42, 64));
+            _btnBackground.Size = new Size(86, 34);
             _btnBackground.Click += OnBackgroundButtonClick;
             _headerPanel.Controls.Add(_btnBackground);
 
             bool overlayActive = _manager.Settings.OverlayEnabled;
             _btnOverlay = CreateStyledButton(overlayActive ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay"),
-                overlayActive ? Color.FromArgb(46, 180, 100) : Color.FromArgb(42, 48, 70));
-            _btnOverlay.Size = new Size(92, 32);
+                overlayActive ? Color.FromArgb(30, 75, 50) : Color.FromArgb(36, 42, 64));
+            _btnOverlay.Size = new Size(96, 34);
             _btnOverlay.AccentColor = overlayActive ? Color.FromArgb(46, 220, 113) : Color.FromArgb(88, 101, 242);
             _btnOverlay.UseAccentBorder = overlayActive;
             _btnOverlay.Click += delegate { _overlayForm.ToggleVisibility(); };
             _headerPanel.Controls.Add(_btnOverlay);
 
-            _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(42, 48, 70));
-            _btnHistory.Size = new Size(88, 32);
+            _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(36, 42, 64));
+            _btnHistory.Size = new Size(92, 34);
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
             _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(88, 101, 242));
-            _btnRefresh.Size = new Size(92, 32);
+            _btnRefresh.Size = new Size(96, 34);
             _btnRefresh.AccentColor = Color.FromArgb(120, 135, 255);
             _btnRefresh.UseAccentBorder = true;
             _btnRefresh.Click += delegate { _manager.TriggerScanAsync(); };
             _headerPanel.Controls.Add(_btnRefresh);
 
-            _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(42, 48, 70));
-            _btnSettings.Size = new Size(96, 32);
+            _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(36, 42, 64));
+            _btnSettings.Size = new Size(104, 34);
             _btnSettings.ShowGearIcon = true;
             _btnSettings.Click += OnSettingsClick;
             _headerPanel.Controls.Add(_btnSettings);
@@ -325,7 +325,7 @@ namespace OmniBattery.UI
 
             // Reposition header buttons right-aligned
             if (_btnRefresh != null)
-                _btnRefresh.Width = _isScanning ? 165 : 92;
+                _btnRefresh.Width = _isScanning ? 165 : 96;
 
             int btnX = cw - 16;
             AeroGlassButton[] buttons = new[]
@@ -337,7 +337,7 @@ namespace OmniBattery.UI
             {
                 if (btn == null) continue;
                 btnX -= btn.Width + 8;
-                btn.Location = new Point(btnX, 16);
+                btn.Location = new Point(btnX, 15);
             }
 
             // Footer: full bottom

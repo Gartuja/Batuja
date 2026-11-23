@@ -6,15 +6,16 @@ using System.Windows.Forms;
 namespace OmniBattery.UI
 {
     /// <summary>
-    /// Botão com estética AeroGlass: cantos arredondados matematicamente simétricos,
-    /// reflexo suave e translúcido de vidro, borda sutil de cristal e iluminação
-    /// elegante ao passar o mouse. Suporta opcionalmente ícone vetorial de engrenagem.
+    /// Botão com estética AeroGlass moderna e fluida:
+    /// Cantos suavemente arredondados (radius 8px), gradiente translúcido contínuo,
+    /// linha de destaque de cristal no topo e suporte nativo ao ícone vetorial de engrenagem.
+    /// Renderização 100% anti-aliased sem serrilhamento ou recortes por máscara de 1-bit.
     /// </summary>
     public class AeroGlassButton : Button
     {
         private bool _isHovered = false;
         private bool _isPressed = false;
-        private int _cornerRadius = 6;
+        private int _cornerRadius = 8;
         private Color _baseColor;
         private Color _accentColor;
         private bool _useAccentBorder = false;
@@ -23,15 +24,7 @@ namespace OmniBattery.UI
         public int CornerRadius
         {
             get { return _cornerRadius; }
-            set
-            {
-                if (_cornerRadius != value)
-                {
-                    _cornerRadius = value;
-                    UpdateRegion();
-                    Invalidate();
-                }
-            }
+            set { _cornerRadius = value; Invalidate(); }
         }
 
         public Color BaseGlassColor
@@ -66,8 +59,8 @@ namespace OmniBattery.UI
                      ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
 
-            _cornerRadius = 6;
-            _baseColor = Color.FromArgb(42, 48, 70);
+            _cornerRadius = 8;
+            _baseColor = Color.FromArgb(36, 42, 64);
             _accentColor = Color.FromArgb(88, 101, 242);
             BackColor = Color.Transparent;
             ForeColor = Color.White;
@@ -77,20 +70,17 @@ namespace OmniBattery.UI
             FlatAppearance.BorderSize = 0;
         }
 
-        protected override void OnSizeChanged(EventArgs e)
+        protected override void OnPaintBackground(PaintEventArgs pevent)
         {
-            base.OnSizeChanged(e);
-            UpdateRegion();
-        }
-
-        private void UpdateRegion()
-        {
-            if (Width > 2 && Height > 2)
+            // Não desenha fundo quadrado nativo de botão para evitar artefatos nos cantos
+            if (Parent != null)
             {
-                using (GraphicsPath p = CreateRoundedRectPath(new RectangleF(0, 0, Width, Height), _cornerRadius))
-                {
-                    this.Region = new Region(p);
-                }
+                // Deixa o painel pai pintar o fundo sob o botão
+                InvokePaintBackground(Parent, pevent);
+            }
+            else
+            {
+                base.OnPaintBackground(pevent);
             }
         }
 
@@ -133,68 +123,70 @@ namespace OmniBattery.UI
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            float w = Width - 1.0f;
-            float h = Height - 1.0f;
-            if (w <= 2 || h <= 2) return;
+            float w = Width - 1.2f;
+            float h = Height - 1.2f;
+            if (w <= 4 || h <= 4) return;
 
-            RectangleF rect = new RectangleF(0.5f, 0.5f, w, h);
+            RectangleF rect = new RectangleF(0.6f, 0.6f, w, h);
 
             using (GraphicsPath path = CreateRoundedRectPath(rect, _cornerRadius))
             {
-                // Cores do gradiente vítreo
+                // Paleta de gradiente vítreo suave
+                Color c = _baseColor;
                 Color topColor;
                 Color bottomColor;
 
                 if (!Enabled)
                 {
-                    topColor = Color.FromArgb(40, 45, 60);
-                    bottomColor = Color.FromArgb(28, 32, 45);
+                    topColor = Color.FromArgb(38, 42, 56);
+                    bottomColor = Color.FromArgb(24, 28, 38);
                 }
                 else if (_isPressed)
                 {
-                    topColor = BlendColors(_baseColor, Color.Black, 0.35f);
-                    bottomColor = BlendColors(_baseColor, Color.Black, 0.15f);
+                    topColor = Color.FromArgb(Math.Max(0, c.R - 15), Math.Max(0, c.G - 15), Math.Max(0, c.B - 10));
+                    bottomColor = Color.FromArgb(Math.Max(0, c.R - 25), Math.Max(0, c.G - 25), Math.Max(0, c.B - 20));
                 }
                 else if (_isHovered)
                 {
-                    topColor = BlendColors(_baseColor, Color.White, 0.26f);
-                    bottomColor = BlendColors(_baseColor, Color.White, 0.10f);
+                    topColor = Color.FromArgb(Math.Min(255, c.R + 40), Math.Min(255, c.G + 40), Math.Min(255, c.B + 50));
+                    bottomColor = Color.FromArgb(Math.Min(255, c.R + 15), Math.Min(255, c.G + 15), Math.Min(255, c.B + 20));
                 }
                 else
                 {
-                    topColor = BlendColors(_baseColor, Color.White, 0.14f);
-                    bottomColor = BlendColors(_baseColor, Color.Black, 0.08f);
+                    topColor = Color.FromArgb(Math.Min(255, c.R + 25), Math.Min(255, c.G + 25), Math.Min(255, c.B + 30));
+                    bottomColor = Color.FromArgb(Math.Max(0, c.R - 10), Math.Max(0, c.G - 10), Math.Max(0, c.B - 10));
                 }
 
-                // 1. Fundo de vidro com gradiente vertical contínuo e suave
+                // 1. Fundo de vidro translúcido contínuo
                 using (LinearGradientBrush bgBrush = new LinearGradientBrush(rect, topColor, bottomColor, 90f))
                 {
                     g.FillPath(bgBrush, path);
                 }
 
-                // 2. Brilho especular sutil na borda superior interna do vidro (sem corte no meio)
-                using (Pen topShinePen = new Pen(Color.FromArgb(_isHovered ? 75 : 45, 255, 255, 255), 1f))
+                // 2. Linha de brilho especular suave na borda superior interna
+                int shineAlpha = _isHovered ? 70 : 45;
+                using (Pen topShinePen = new Pen(Color.FromArgb(shineAlpha, 255, 255, 255), 1f))
                 {
-                    g.DrawLine(topShinePen, rect.X + _cornerRadius, rect.Y + 1f, rect.Right - _cornerRadius, rect.Y + 1f);
+                    g.DrawLine(topShinePen, rect.X + _cornerRadius, rect.Y + 1.2f, rect.Right - _cornerRadius, rect.Y + 1.2f);
                 }
 
-                // 3. Borda de cristal / destaque de vidro
+                // 3. Borda de cristal
                 Color borderColor;
                 if (!Enabled)
                 {
-                    borderColor = Color.FromArgb(30, 255, 255, 255);
+                    borderColor = Color.FromArgb(25, 255, 255, 255);
                 }
                 else if (_isHovered)
                 {
                     borderColor = _useAccentBorder
-                        ? Color.FromArgb(230, _accentColor)
-                        : Color.FromArgb(135, 255, 255, 255);
+                        ? Color.FromArgb(240, _accentColor)
+                        : Color.FromArgb(120, 255, 255, 255);
                 }
                 else
                 {
                     borderColor = _useAccentBorder
                         ? Color.FromArgb(160, _accentColor)
-                        : Color.FromArgb(50, 255, 255, 255);
+                        : Color.FromArgb(45, 255, 255, 255);
                 }
 
                 using (Pen borderPen = new Pen(borderColor, 1f))
@@ -202,12 +194,11 @@ namespace OmniBattery.UI
                     g.DrawPath(borderPen, path);
                 }
 
-                // 4. Conteúdo: Texto e Ícone de Engrenagem (se ativado)
+                // 4. Texto e Ícone de Engrenagem
                 Color textColor = !Enabled ? Color.FromArgb(120, 130, 155) : ForeColor;
 
                 if (_showGearIcon)
                 {
-                    // Mede o texto para centralizar o conjunto (engrenagem + espaço + texto)
                     SizeF textSize = g.MeasureString(Text, Font);
                     float gearOuterR = 5.2f;
                     float gearInnerR = 3.6f;
@@ -231,9 +222,15 @@ namespace OmniBattery.UI
                 }
                 else
                 {
-                    Rectangle textRect = new Rectangle(0, 0, Width, Height);
-                    TextRenderer.DrawText(g, Text, Font, textRect, textColor,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                    StringFormat sf = new StringFormat
+                    {
+                        Alignment = StringAlignment.Center,
+                        LineAlignment = StringAlignment.Center
+                    };
+                    using (SolidBrush textBrush = new SolidBrush(textColor))
+                    {
+                        g.DrawString(Text, Font, textBrush, rect, sf);
+                    }
                 }
             }
         }
@@ -279,15 +276,6 @@ namespace OmniBattery.UI
             path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
-        }
-
-        private static Color BlendColors(Color c1, Color c2, float amount)
-        {
-            amount = Math.Max(0f, Math.Min(1f, amount));
-            int r = (int)(c1.R * (1 - amount) + c2.R * amount);
-            int g = (int)(c1.G * (1 - amount) + c2.G * amount);
-            int b = (int)(c1.B * (1 - amount) + c2.B * amount);
-            return Color.FromArgb(c1.A, r, g, b);
         }
     }
 }

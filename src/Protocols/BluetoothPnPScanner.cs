@@ -14,8 +14,11 @@ namespace OmniBattery.Protocols
     /// - Fones de ouvido / Headsets / Earbuds (JBL, AirPods, UGREEN, Sony, Galaxy Buds, etc.)
     /// - Mouses Bluetooth
     /// - Teclados Bluetooth
-    /// Agrupa automaticamente múltiplos sub-serviços do mesmo aparelho físico pelo endereço MAC,
-    /// evitando duplicações e filtrando celulares, portas seriais e serviços internos.
+    /// 
+    /// Agrupa perfeitamente todos os sub-serviços do mesmo aparelho físico pelo endereço MAC real.
+    /// Detecta com precisão se o dispositivo está realmente LIGADO/CONECTADO agora ou DESLIGADO.
+    /// Dispositivos desligados são ignorados para não poluir a tela, a bandeja ou o overlay.
+    /// Não utiliza valores de bateria falsos/estimados (como 85%).
     /// </summary>
     public class BluetoothPnPScanner : IProtocolScanner
     {
@@ -24,6 +27,45 @@ namespace OmniBattery.Protocols
             get { return "Bluetooth BAS / HFP (Windows PnP)"; }
         }
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct WAVEOUTCAPS
+        {
+            public ushort wMid;
+            public ushort wPid;
+            public uint vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szPname;
+            public uint dwFormats;
+            public ushort wChannels;
+            public ushort wReserved1;
+            public uint dwSupport;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct WAVEINCAPS
+        {
+            public ushort wMid;
+            public ushort wPid;
+            public uint vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szPname;
+            public uint dwFormats;
+            public ushort wChannels;
+            public ushort wReserved1;
+        }
+
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint waveOutGetNumDevs();
+
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint waveOutGetDevCaps(IntPtr uDeviceID, ref WAVEOUTCAPS pwoc, uint cbwoc);
+
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint waveInGetNumDevs();
+
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint waveInGetDevCaps(IntPtr uDeviceID, ref WAVEINCAPS pwic, uint cbwic);
+
         private class BtCandidate
         {
             public string MacAddress;
@@ -31,6 +73,7 @@ namespace OmniBattery.Protocols
             public List<string> Names = new List<string>();
             public int BestBattery = -1;
             public bool HasRealBattery = false;
+            public bool IsConnected = false;
             public DeviceCategory Category = DeviceCategory.Generico;
         }
 
@@ -38,6 +81,7 @@ namespace OmniBattery.Protocols
         {
             List<BatteryDevice> devices = new List<BatteryDevice>();
             Dictionary<string, string> pairedBtNames = GetPairedBluetoothNames();
+            List<string> activeAudioDevices = GetActiveAudioDeviceNames();
 
             IntPtr hDevInfo = Win32Api.SetupDiGetClassDevs(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, Win32Api.DIGCF_ALLCLASSES | Win32Api.DIGCF_PRESENT);
             if (hDevInfo == (IntPtr)(-1))
@@ -55,6 +99,8 @@ namespace OmniBattery.Protocols
                 Win32Api.DEVPROPKEY keyDesc = Win32Api.PKEY_Device_DeviceDesc;
                 Win32Api.DEVPROPKEY keyBusDesc = Win32Api.PKEY_Device_BusReportedDeviceDesc;
                 Win32Api.DEVPROPKEY keyInst = Win32Api.PKEY_Device_InstanceId;
+                Win32Api.DEVPROPKEY keyIsConnected = new Win32Api.DEVPROPKEY { fmtid = new Guid("83da6326-97a6-4088-9453-a1923f573b29"), pid = 15 };
+                Win32Api.DEVPROPKEY keyDevNodeStatus = new Win32Api.DEVPROPKEY { fmtid = new Guid("43424749-69da-4784-8243-d81149a33405"), pid = 38 };
 
                 for (uint i = 0; Win32Api.SetupDiEnumDeviceInfo(hDevInfo, i, ref devData); i++)
                 {
@@ -71,10 +117,10 @@ namespace OmniBattery.Protocols
                     if (lowerInst.Contains("ms_bth") || lowerInst.Contains("ms_rfcomm"))
                         continue;
 
-                    // Extrai o endereço MAC físico (12 caracteres hexadecimais)
+                    // Extrai o endereço MAC físico Bluetooth real (48-bit)
                     string mac = ExtractBluetoothMac(instId);
                     if (string.IsNullOrEmpty(mac))
-                        mac = instId;
+                        continue; // Sem MAC válido, descarta nó irrelevante
 
                     // Lê nomes disponíveis
                     string devName = GetStringProperty(hDevInfo, ref devData, ref keyName);
@@ -104,10 +150,31 @@ namespace OmniBattery.Protocols
                     if (IsIgnoredServiceOrDevice(devName, instId))
                         continue;
 
-                    // Lê bateria nativa se disponível
+                    // Verifica se o devnode está fisicamente conectado
                     uint propType;
-                    byte[] batBuf = new byte[64];
+                    byte[] connBuf = new byte[8];
                     uint reqSize;
+                    bool nodeIsConnected = false;
+
+                    if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyIsConnected, out propType, connBuf, (uint)connBuf.Length, out reqSize, 0) && reqSize > 0)
+                    {
+                        if (connBuf[0] != 0)
+                            nodeIsConnected = true;
+                    }
+
+                    byte[] statusBuf = new byte[8];
+                    if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyDevNodeStatus, out propType, statusBuf, (uint)statusBuf.Length, out reqSize, 0) && reqSize >= 4)
+                    {
+                        uint status = BitConverter.ToUInt32(statusBuf, 0);
+                        // DN_STARTED = 0x08, DN_HAS_PROBLEM = 0x400
+                        if ((status & 0x00000008) != 0 && (status & 0x00000400) == 0)
+                        {
+                            nodeIsConnected = true;
+                        }
+                    }
+
+                    // Lê bateria nativa se disponível
+                    byte[] batBuf = new byte[64];
                     bool hasBattery = Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyBattery, out propType, batBuf, (uint)batBuf.Length, out reqSize, 0) && reqSize > 0;
                     int batVal = hasBattery ? (int)batBuf[0] : -1;
 
@@ -122,6 +189,9 @@ namespace OmniBattery.Protocols
                         candidates[mac] = cand;
                     }
 
+                    if (nodeIsConnected)
+                        cand.IsConnected = true;
+
                     if (!cand.Names.Contains(devName))
                         cand.Names.Add(devName);
 
@@ -129,6 +199,7 @@ namespace OmniBattery.Protocols
                     {
                         cand.BestBattery = batVal;
                         cand.HasRealBattery = true;
+                        cand.IsConnected = true;
                     }
 
                     DeviceCategory cat = CategorizeDevice(devName, instId);
@@ -138,10 +209,7 @@ namespace OmniBattery.Protocols
                     }
                 }
             }
-            catch
-            {
-                // Tratamento seguro de exceções de enumeração
-            }
+            catch { }
             finally
             {
                 Win32Api.SetupDiDestroyDeviceInfoList(hDevInfo);
@@ -169,7 +237,33 @@ namespace OmniBattery.Protocols
                 if (IsBlacklistedProduct(bestName))
                     continue;
 
-                int finalBattery = cand.BestBattery >= 0 ? cand.BestBattery : 85;
+                // Para fones de ouvido / headsets: verifica se o endpoint de áudio está ativo no Windows
+                if (category == DeviceCategory.FoneDeOuvido && !cand.IsConnected)
+                {
+                    string lowerBest = bestName.ToLowerInvariant();
+                    foreach (string activeAudio in activeAudioDevices)
+                    {
+                        if (activeAudio.Contains(lowerBest) ||
+                            (lowerBest.Contains("jbl") && activeAudio.Contains("jbl")) ||
+                            (lowerBest.Contains("ugreen") && activeAudio.Contains("ugreen")) ||
+                            (lowerBest.Contains("sony") && activeAudio.Contains("sony")) ||
+                            (lowerBest.Contains("airpod") && activeAudio.Contains("airpod")))
+                        {
+                            cand.IsConnected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // REGRA ESTRITA DO USUÁRIO: Somente dispositivos ligados no momento aparecem!
+                // Se o dispositivo estiver desligado ou desconectado, não adiciona aos ativos
+                if (!cand.IsConnected)
+                {
+                    continue;
+                }
+
+                // Bateria: NUNCA usa 85% arbitrário. Se não reportada pelo driver, registra -1 (desconhecido)
+                int finalBattery = cand.BestBattery >= 0 ? cand.BestBattery : -1;
 
                 devices.Add(new BatteryDevice
                 {
@@ -181,26 +275,84 @@ namespace OmniBattery.Protocols
                     IsConnected = true,
                     Protocol = "Bluetooth GATT / HFP",
                     LastUpdated = DateTime.Now,
-                    Details = string.Format("Bluetooth MAC: {0} | {1}", FormatMac(cand.MacAddress), cand.HasRealBattery ? "Nativo Windows" : "Estimado")
+                    Details = string.Format("Bluetooth MAC: {0} | {1}", FormatMac(cand.MacAddress), cand.HasRealBattery ? "Nativo Windows" : "Conectado")
                 });
             }
 
             return devices;
         }
 
+        private static List<string> GetActiveAudioDeviceNames()
+        {
+            List<string> names = new List<string>();
+            try
+            {
+                uint numOut = waveOutGetNumDevs();
+                for (int i = 0; i < numOut; i++)
+                {
+                    WAVEOUTCAPS caps = new WAVEOUTCAPS();
+                    if (waveOutGetDevCaps((IntPtr)i, ref caps, (uint)Marshal.SizeOf(caps)) == 0)
+                    {
+                        if (!string.IsNullOrEmpty(caps.szPname))
+                            names.Add(caps.szPname.ToLowerInvariant());
+                    }
+                }
+
+                uint numIn = waveInGetNumDevs();
+                for (int i = 0; i < numIn; i++)
+                {
+                    WAVEINCAPS capsIn = new WAVEINCAPS();
+                    if (waveInGetDevCaps((IntPtr)i, ref capsIn, (uint)Marshal.SizeOf(capsIn)) == 0)
+                    {
+                        if (!string.IsNullOrEmpty(capsIn.szPname))
+                            names.Add(capsIn.szPname.ToLowerInvariant());
+                    }
+                }
+            }
+            catch { }
+            return names;
+        }
+
         private string ExtractBluetoothMac(string instId)
         {
             if (string.IsNullOrEmpty(instId)) return "";
-            // Procura sequência de 12 dígitos hexadecimais no ID do dispositivo
-            Match m = Regex.Match(instId, @"([0-9a-fA-F]{12})", RegexOptions.IgnoreCase);
-            if (m.Success)
-            {
+
+            // 1. Padrão DEV_XXXXXXXXXXXX (BTHENUM\DEV_XXXXXXXXXXXX ou BTHLE\DEV_XXXXXXXXXXXX)
+            Match m = Regex.Match(instId, @"DEV_([0-9a-fA-F]{12})", RegexOptions.IgnoreCase);
+            if (m.Success && IsValidMac(m.Groups[1].Value))
                 return m.Groups[1].Value.ToUpperInvariant();
+
+            // 2. Padrão PnP com &0&XXXXXXXXXXXX_ ou _XXXXXXXXXXXX_
+            m = Regex.Match(instId, @"&0&([0-9a-fA-F]{12})", RegexOptions.IgnoreCase);
+            if (m.Success && IsValidMac(m.Groups[1].Value))
+                return m.Groups[1].Value.ToUpperInvariant();
+
+            m = Regex.Match(instId, @"[&_]([0-9a-fA-F]{12})[_&]", RegexOptions.IgnoreCase);
+            if (m.Success && IsValidMac(m.Groups[1].Value))
+                return m.Groups[1].Value.ToUpperInvariant();
+
+            // 3. Procura da direita para a esquerda por qualquer sequência de 12 hex que seja um MAC válido
+            MatchCollection mc = Regex.Matches(instId, @"([0-9a-fA-F]{12})");
+            for (int i = mc.Count - 1; i >= 0; i--)
+            {
+                string val = mc[i].Groups[1].Value;
+                if (IsValidMac(val))
+                    return val.ToUpperInvariant();
             }
+
             return "";
         }
 
-        private string FormatMac(string mac)
+        private static bool IsValidMac(string mac)
+        {
+            if (string.IsNullOrEmpty(mac) || mac.Length != 12) return false;
+            string u = mac.ToUpperInvariant();
+            // Rejeita o Base UUID do Bluetooth SIG (00805F9B34FB) que não é endereço de dispositivo
+            if (u == "00805F9B34FB" || u == "000000000000" || u == "FFFFFFFFFFFF") return false;
+            return true;
+        }
+
+        private static string FormatMac(string mac)
         {
             if (string.IsNullOrEmpty(mac) || mac.Length != 12) return mac;
             return string.Format("{0}:{1}:{2}:{3}:{4}:{5}",
@@ -208,54 +360,52 @@ namespace OmniBattery.Protocols
                 mac.Substring(6, 2), mac.Substring(8, 2), mac.Substring(10, 2));
         }
 
-        private bool IsIgnoredServiceOrDevice(string name, string instId)
+        private static bool IsIgnoredServiceOrDevice(string name, string instId)
         {
             string s = (name + " " + instId).ToLowerInvariant();
 
-            // Serviços e perfis de software/telemetria
-            if (s.Contains("serial") || s.Contains("link serial") || s.Contains("network user") ||
-                s.Contains("obex") || s.Contains("sim access") || s.Contains("fastpair") ||
-                s.Contains("btnotifyr") || s.Contains("btfastpair") || s.Contains("gsound") ||
-                s.Contains("transport") || s.Contains("avrcp") || s.Contains("hands-free ag") ||
-                s.Contains("periférico bluetooth") || s.Contains("dispositivo periférico") ||
-                s.Contains("pan network") || s.Contains("enumerador") || s.Contains("radio bluetooth"))
+            if (s.Contains("serial") || s.Contains("porta serial") || s.Contains("com port") ||
+                s.Contains("obex") || s.Contains("sim access") || s.Contains("sap") ||
+                s.Contains("fastpair") || s.Contains("btfastpair") || s.Contains("btnotify") ||
+                s.Contains("pan network") || s.Contains("network user") || s.Contains("dun") ||
+                s.Contains("syncml") || s.Contains("fax") || s.Contains("modem") ||
+                s.Contains("generic access") || s.Contains("generic attribute") ||
+                s.Contains("device information") || s.Contains("dispositivo periférico") ||
+                s.Contains("periférico bluetooth"))
             {
                 return true;
             }
-
-            // Celulares e tablets
-            if (IsBlacklistedProduct(name))
-                return true;
 
             return false;
         }
 
-        private bool IsBlacklistedProduct(string name)
+        private static bool IsBlacklistedProduct(string name)
         {
             string s = name.ToLowerInvariant();
+
             if (s.Contains("galaxy") || s.Contains("s25") || s.Contains("s24") || s.Contains("s23") ||
                 s.Contains("s22") || s.Contains("s21") || s.Contains("s20") || s.Contains("iphone") ||
-                s.Contains("ipad") || s.Contains("android") || s.Contains("phone") || s.Contains("celular") ||
-                s.Contains("redmi") || s.Contains("xiaomi") || s.Contains("motorola") || s.Contains("moto g") ||
-                s.Contains("moto e") || s.Contains("pixel") || s.Contains("poco") || s.Contains("huawei") ||
-                s.Contains("sm-") || s.Contains("desktop-") || s.Contains("laptop-"))
+                s.Contains("ipad") || s.Contains("motorola") || s.Contains("moto g") || s.Contains("moto edge") ||
+                s.Contains("xiaomi") || s.Contains("redmi") || s.Contains("poco") || s.Contains("huawei") ||
+                s.Contains("desktop-") || s.Contains("laptop-") || s.Contains("pc-") || s.Contains("android"))
             {
-                return true;
+                if (!s.Contains("buds") && !s.Contains("headset") && !s.Contains("fone"))
+                    return true;
             }
+
             return false;
         }
 
         private string ResolveBestName(BtCandidate cand)
         {
-            if (cand.Names.Count == 0) return "Dispositivo Bluetooth";
-
-            // Prioriza o nome de produto mais limpo (sem palavras técnicas de serviço)
-            string best = cand.Names[0];
-            int bestScore = -1;
+            string best = cand.Names.Count > 0 ? cand.Names[0] : "Dispositivo Bluetooth";
+            int bestScore = -100;
 
             foreach (string n in cand.Names)
             {
-                int score = 100;
+                if (string.IsNullOrEmpty(n)) continue;
+                int score = n.Length;
+
                 string lower = n.ToLowerInvariant();
                 if (lower.Contains("hands-free") || lower.Contains("handsfree")) score -= 30;
                 if (lower.Contains("transp") || lower.Contains("transport")) score -= 40;
@@ -290,23 +440,21 @@ namespace OmniBattery.Protocols
         private string GetStringProperty(IntPtr hDevInfo, ref Win32Api.SP_DEVINFO_DATA devData, ref Win32Api.DEVPROPKEY propKey)
         {
             uint propType;
-            byte[] buf = new byte[512];
+            byte[] buf = new byte[1024];
             uint reqSize;
 
-            if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref propKey, out propType, buf, (uint)buf.Length, out reqSize, 0))
+            if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref propKey, out propType, buf, (uint)buf.Length, out reqSize, 0) && reqSize > 0)
             {
-                if (reqSize > 0)
-                {
-                    return Encoding.Unicode.GetString(buf, 0, (int)reqSize).TrimEnd('\0').Trim();
-                }
+                return Encoding.Unicode.GetString(buf, 0, (int)reqSize).TrimEnd('\0').Trim();
             }
 
-            return null;
+            return string.Empty;
         }
 
         private Dictionary<string, string> GetPairedBluetoothNames()
         {
-            Dictionary<string, string> map = new Dictionary<string, string>();
+            Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 using (RegistryKey baseKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices"))
@@ -315,11 +463,11 @@ namespace OmniBattery.Protocols
                     {
                         foreach (string subName in baseKey.GetSubKeyNames())
                         {
-                            using (RegistryKey subKey = baseKey.OpenSubKey(subName))
+                            using (RegistryKey devKey = baseKey.OpenSubKey(subName))
                             {
-                                if (subKey != null)
+                                if (devKey != null)
                                 {
-                                    object nameVal = subKey.GetValue("Name");
+                                    object nameVal = devKey.GetValue("FriendlyName") ?? devKey.GetValue("Name");
                                     if (nameVal != null)
                                     {
                                         string name = "";
@@ -371,13 +519,6 @@ namespace OmniBattery.Protocols
             }
 
             return DeviceCategory.Generico;
-        }
-
-        private string TruncateId(string id)
-        {
-            if (string.IsNullOrEmpty(id)) return "";
-            if (id.Length <= 35) return id;
-            return id.Substring(0, 32) + "...";
         }
     }
 }
