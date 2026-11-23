@@ -875,29 +875,74 @@ namespace OmniBattery.UI
                         try
                         {
                             System.Net.ServicePointManager.SecurityProtocol |= (System.Net.SecurityProtocolType)3072; // Tls12
+                            string tag = "";
+
                             using (System.Net.WebClient wc = new System.Net.WebClient())
                             {
                                 wc.Headers.Add("User-Agent", "Batuja-App");
-                                string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
-                                string tag = "";
-                                int tagIdx = json.IndexOf("\"tag_name\":");
-                                if (tagIdx >= 0)
+                                wc.Headers.Add("Accept", "application/vnd.github.v3+json");
+
+                                // 1. Tenta obter a release mais recente no GitHub
+                                try
                                 {
-                                    int startQuote = json.IndexOf('"', tagIdx + 11);
-                                    if (startQuote >= 0)
+                                    string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
+                                    int tagIdx = json.IndexOf("\"tag_name\":");
+                                    if (tagIdx >= 0)
                                     {
-                                        int endQuote = json.IndexOf('"', startQuote + 1);
-                                        if (endQuote > startQuote)
+                                        int startQuote = json.IndexOf('"', tagIdx + 11);
+                                        if (startQuote >= 0)
                                         {
-                                            tag = json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                                            int endQuote = json.IndexOf('"', startQuote + 1);
+                                            if (endQuote > startQuote)
+                                                tag = json.Substring(startQuote + 1, endQuote - startQuote - 1);
                                         }
                                     }
+                                }
+                                catch (System.Net.WebException wex)
+                                {
+                                    // Se o repositório ainda não possui releases (404), não é erro de rede
+                                    if (wex.Response is System.Net.HttpWebResponse)
+                                    {
+                                        System.Net.HttpWebResponse resp = (System.Net.HttpWebResponse)wex.Response;
+                                        if (resp.StatusCode != System.Net.HttpStatusCode.NotFound)
+                                            throw;
+                                    }
+                                    else
+                                    {
+                                        throw;
+                                    }
+                                }
+
+                                // 2. Caso não haja releases formais, verifica tags do repositório
+                                if (string.IsNullOrEmpty(tag))
+                                {
+                                    try
+                                    {
+                                        wc.Headers.Clear();
+                                        wc.Headers.Add("User-Agent", "Batuja-App");
+                                        wc.Headers.Add("Accept", "application/vnd.github.v3+json");
+                                        string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/tags");
+                                        int nameIdx = tagsJson.IndexOf("\"name\":");
+                                        if (nameIdx >= 0)
+                                        {
+                                            int startQuote = tagsJson.IndexOf('"', nameIdx + 7);
+                                            if (startQuote >= 0)
+                                            {
+                                                int endQuote = tagsJson.IndexOf('"', startQuote + 1);
+                                                if (endQuote > startQuote)
+                                                    tag = tagsJson.Substring(startQuote + 1, endQuote - startQuote - 1);
+                                            }
+                                        }
+                                    }
+                                    catch { }
                                 }
 
                                 sf.BeginInvoke(new Action(delegate
                                 {
                                     btnCheckUpdate.Enabled = true;
-                                    if (!string.IsNullOrEmpty(tag) && !tag.Equals(AppSettings.AppVersion, StringComparison.OrdinalIgnoreCase))
+                                    if (!string.IsNullOrEmpty(tag) &&
+                                        !tag.Equals(AppSettings.AppVersion, StringComparison.OrdinalIgnoreCase) &&
+                                        !tag.Equals(AppSettings.AppVersion.TrimStart('v', 'V'), StringComparison.OrdinalIgnoreCase))
                                     {
                                         lblUpdateStatus.Text = string.Format("Nova versão disponível: {0}", tag);
                                         if (MessageBox.Show(sf, I18n.T("UpdateAvailableMsg", tag), I18n.T("UpdateTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
