@@ -89,22 +89,10 @@ namespace OmniBattery.UI
         private void OnOverlayStateChanged(bool isVisible)
         {
             if (_btnOverlay == null) return;
-            if (isVisible)
-            {
-                _btnOverlay.Text = I18n.T("BtnOverlayActive");
-                _btnOverlay.BaseGlassColor = Color.FromArgb(24, 65, 45);
-                _btnOverlay.AccentColor = Color.FromArgb(0, 230, 118);
-                _btnOverlay.UseAccentBorder = true;
-                _btnOverlay.ForeColor = Color.White;
-            }
-            else
-            {
-                _btnOverlay.Text = I18n.T("BtnOverlay");
-                _btnOverlay.BaseGlassColor = Color.FromArgb(34, 40, 62);
-                _btnOverlay.AccentColor = Color.FromArgb(88, 101, 242);
-                _btnOverlay.UseAccentBorder = false;
-                _btnOverlay.ForeColor = Color.White;
-            }
+            _btnOverlay.Text = isVisible ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay");
+            _btnOverlay.ForeColor = Color.Black;
+            _btnOverlay.BaseGlassColor = Color.FromArgb(192, 192, 192);
+            _btnOverlay.Invalidate();
         }
 
         // ─────────────────────────── Form style ───────────────────────────────
@@ -843,7 +831,7 @@ namespace OmniBattery.UI
             {
                 menu.Items.Add(new ToolStripSeparator());
 
-                ToolStripMenuItem itemRemove = new ToolStripMenuItem("Remover Fundo (Padrão Escuro)");
+                ToolStripMenuItem itemRemove = new ToolStripMenuItem(I18n.T("RemoveBackground"));
                 itemRemove.Click += delegate
                 {
                     _manager.Settings.BackgroundImagePath = "";

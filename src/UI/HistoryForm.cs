@@ -26,9 +26,9 @@ namespace OmniBattery.UI
             Size = new Size(640, 520);
             MinimumSize = new Size(540, 400);
             StartPosition = FormStartPosition.CenterParent;
-            BackColor = Color.FromArgb(20, 22, 32);
-            ForeColor = Color.White;
-            Font = new Font("Segoe UI", 9f);
+            BackColor = Color.FromArgb(192, 192, 192);
+            ForeColor = Color.Black;
+            Font = new Font("Tahoma", 8.5f);
             DoubleBuffered = true;
 
             try { Icon = AppIconRenderer.CreateIcon(); } catch { }
@@ -42,8 +42,8 @@ namespace OmniBattery.UI
         {
             int cw = ClientSize.Width;
             int ch = ClientSize.Height;
-            int headerH = 68;
-            int footerH = 50;
+            int headerH = 64;
+            int footerH = 44;
 
             if (_headerPanel != null)
             {
@@ -56,7 +56,7 @@ namespace OmniBattery.UI
             {
                 _footerPanel.SetBounds(0, ch - footerH, cw, footerH);
                 if (_btnClose != null)
-                    _btnClose.Location = new Point(_footerPanel.Width - _btnClose.Width - 16, 10);
+                    _btnClose.Location = new Point(_footerPanel.Width - _btnClose.Width - 16, 8);
             }
 
             if (_itemsPanel != null)
@@ -76,39 +76,50 @@ namespace OmniBattery.UI
             // Header
             _headerPanel = new Panel
             {
-                BackColor = Color.FromArgb(28, 31, 46),
-                Padding = new Padding(18, 12, 18, 12)
+                BackColor = Color.FromArgb(192, 192, 192),
+                Padding = new Padding(18, 10, 18, 10)
+            };
+            _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                int sepY = _headerPanel.Height - 2;
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                {
+                    g.DrawLine(pDark, 0, sepY, _headerPanel.Width, sepY);
+                    g.DrawLine(pWhite, 0, sepY + 1, _headerPanel.Width, sepY + 1);
+                }
             };
 
             Label lblTitle = new Label
             {
                 Text = I18n.T("HistoryTitle"),
-                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = new Font("Tahoma", 11.5f, FontStyle.Bold),
+                ForeColor = Color.Black,
                 AutoSize = true,
-                Location = new Point(16, 12)
+                Location = new Point(14, 10)
             };
             _headerPanel.Controls.Add(lblTitle);
 
             Label lblSubtitle = new Label
             {
                 Text = I18n.T("HistorySubtitle"),
-                Font = new Font("Segoe UI", 8.25f),
-                ForeColor = Color.FromArgb(140, 145, 175),
+                Font = new Font("Tahoma", 8f),
+                ForeColor = Color.Black,
                 AutoSize = true,
-                Location = new Point(17, 38)
+                Location = new Point(15, 34)
             };
             _headerPanel.Controls.Add(lblSubtitle);
 
             _btnClear = new AeroGlassButton
             {
                 Text = I18n.T("ClearHistory"),
-                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(255, 120, 120),
-                BaseGlassColor = Color.FromArgb(60, 35, 45),
-                AccentColor = Color.FromArgb(255, 90, 90),
-                UseAccentBorder = true,
-                Size = new Size(124, 30),
+                Font = new Font("Tahoma", 8.25f),
+                ForeColor = Color.Black,
+                BaseGlassColor = Color.FromArgb(192, 192, 192),
+                Classic3D = true,
+                CornerRadius = 0,
+                Size = new Size(116, 24),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Location = new Point(492, 18),
                 Cursor = Cursors.Hand
@@ -127,29 +138,41 @@ namespace OmniBattery.UI
             // Footer
             _footerPanel = new Panel
             {
-                BackColor = Color.FromArgb(28, 31, 46),
-                Padding = new Padding(16, 8, 16, 8)
+                BackColor = Color.FromArgb(192, 192, 192),
+                Padding = new Padding(16, 6, 16, 6)
+            };
+            _footerPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                {
+                    g.DrawLine(pDark, 0, 0, _footerPanel.Width, 0);
+                    g.DrawLine(pWhite, 0, 1, _footerPanel.Width, 1);
+                }
             };
 
             _lblSummary = new Label
             {
                 Text = "",
-                Font = new Font("Segoe UI", 8.5f),
-                ForeColor = Color.FromArgb(140, 145, 175),
+                Font = new Font("Tahoma", 8f),
+                ForeColor = Color.Black,
                 AutoSize = true,
-                Location = new Point(16, 15)
+                Location = new Point(16, 12)
             };
             _footerPanel.Controls.Add(_lblSummary);
 
             _btnClose = new AeroGlassButton
             {
                 Text = I18n.T("Close"),
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
-                ForeColor = Color.White,
-                BaseGlassColor = Color.FromArgb(42, 48, 70),
-                Size = new Size(88, 30),
+                Font = new Font("Tahoma", 8.25f),
+                ForeColor = Color.Black,
+                BaseGlassColor = Color.FromArgb(192, 192, 192),
+                Classic3D = true,
+                CornerRadius = 0,
+                Size = new Size(80, 24),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(526, 10),
+                Location = new Point(534, 8),
                 Cursor = Cursors.Hand
             };
             _btnClose.Click += delegate { Close(); };
@@ -159,8 +182,8 @@ namespace OmniBattery.UI
             _itemsPanel = new Panel
             {
                 AutoScroll = true,
-                BackColor = Color.FromArgb(20, 22, 32),
-                Padding = new Padding(16)
+                BackColor = Color.FromArgb(192, 192, 192),
+                Padding = new Padding(14)
             };
 
             Controls.Add(_headerPanel);
@@ -193,8 +216,8 @@ namespace OmniBattery.UI
                 Label empty = new Label
                 {
                     Text = "Nenhum histórico registrado ainda.\nConecte um dispositivo sem fio para registrar.",
-                    Font = new Font("Segoe UI", 10.5f),
-                    ForeColor = Color.FromArgb(110, 115, 145),
+                    Font = new Font("Tahoma", 9f),
+                    ForeColor = Color.FromArgb(80, 80, 80),
                     TextAlign = ContentAlignment.MiddleCenter,
                     AutoSize = false,
                     Size = new Size(cardW, 120),
@@ -225,39 +248,30 @@ namespace OmniBattery.UI
             Panel p = new Panel
             {
                 Size = new Size(width, 74),
-                BackColor = isLive ? Color.FromArgb(28, 31, 46) : Color.FromArgb(22, 24, 34),
+                BackColor = Color.FromArgb(192, 192, 192),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             p.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
                 Rectangle r = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
-                using (GraphicsPath gp = RoundedRect(r, 8))
-                {
-                    Color border = isLive ? Color.FromArgb(46, 204, 113) : Color.FromArgb(45, 48, 68);
-                    using (Pen pen = new Pen(border, isLive ? 1.4f : 1f))
-                        g.DrawPath(pen, gp);
-                }
+                Draw3DRaised(g, r, 2);
             };
 
-            // Device Icon (left)
+            // Device Icon (left) in Sunken 3D Box
             PictureBox pbIcon = new PictureBox
             {
-                Size = new Size(40, 40),
-                Location = new Point(14, 17),
-                BackColor = Color.Transparent
+                Size = new Size(42, 42),
+                Location = new Point(14, 16),
+                BackColor = Color.FromArgb(192, 192, 192)
             };
-            Color iconColor = isLive ? Color.FromArgb(46, 204, 113) : Color.FromArgb(140, 145, 175);
             pbIcon.Paint += delegate(object s, PaintEventArgs pe)
             {
-                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (SolidBrush b = new SolidBrush(Color.FromArgb(isLive ? 35 : 20, iconColor)))
-                    pe.Graphics.FillEllipse(b, 0, 0, 39, 39);
-                using (Pen pen = new Pen(iconColor, 1.2f))
-                    pe.Graphics.DrawEllipse(pen, 0, 0, 39, 39);
-                IconRenderer.DrawDeviceIcon(pe.Graphics, new Rectangle(0, 0, 40, 40), item.Category, iconColor, null);
+                Graphics g = pe.Graphics;
+                Rectangle r = new Rectangle(0, 0, 41, 41);
+                Draw3DSunken(g, r);
+                IconRenderer.DrawDeviceIcon(g, r, item.Category, Color.Black, null);
             };
             p.Controls.Add(pbIcon);
 
@@ -265,10 +279,10 @@ namespace OmniBattery.UI
             Label lblName = new Label
             {
                 Text = item.Name,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                ForeColor = isLive ? Color.White : Color.FromArgb(180, 185, 205),
+                Font = new Font("Tahoma", 9.5f, FontStyle.Bold),
+                ForeColor = Color.Black,
                 AutoSize = true,
-                Location = new Point(64, 14)
+                Location = new Point(66, 12)
             };
             p.Controls.Add(lblName);
 
@@ -279,10 +293,10 @@ namespace OmniBattery.UI
             Label lblSub = new Label
             {
                 Text = sub,
-                Font = new Font("Segoe UI", 7.8f),
-                ForeColor = Color.FromArgb(130, 135, 160),
+                Font = new Font("Tahoma", 8f),
+                ForeColor = Color.Black,
                 AutoSize = true,
-                Location = new Point(65, 38)
+                Location = new Point(67, 34)
             };
             p.Controls.Add(lblSub);
 
@@ -290,42 +304,73 @@ namespace OmniBattery.UI
             Label lblTime = new Label
             {
                 Text = I18n.T("LastSeen", string.Format("{0:dd/MM HH:mm:ss}", item.LastSeen)),
-                Font = new Font("Segoe UI", 7.5f),
-                ForeColor = Color.FromArgb(100, 105, 130),
+                Font = new Font("Tahoma", 7.5f),
+                ForeColor = Color.FromArgb(90, 90, 90),
                 AutoSize = true,
-                Location = new Point(65, 54)
+                Location = new Point(67, 52)
             };
             p.Controls.Add(lblTime);
 
-            // Status Badge on Right (sem botão de desligar manual)
-            if (isLive)
+            // Status Badge on Right
+            Label lblStatus = new Label
             {
-                Label lblStatus = new Label
-                {
-                    Text = "● " + I18n.T("ConnectedStatus"),
-                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(46, 204, 113),
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                    Location = new Point(p.Width - 120, 27)
-                };
-                p.Controls.Add(lblStatus);
-            }
-            else
-            {
-                Label lblStatus = new Label
-                {
-                    Text = "○ " + I18n.T("DisconnectedStatus"),
-                    Font = new Font("Segoe UI", 8.5f),
-                    ForeColor = Color.FromArgb(130, 135, 160),
-                    AutoSize = true,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                    Location = new Point(p.Width - 120, 27)
-                };
-                p.Controls.Add(lblStatus);
-            }
+                Text = isLive ? ("● " + I18n.T("ConnectedStatus")) : ("○ " + I18n.T("DisconnectedStatus")),
+                Font = new Font("Tahoma", 8.5f, isLive ? FontStyle.Bold : FontStyle.Regular),
+                ForeColor = isLive ? Color.FromArgb(0, 128, 0) : Color.FromArgb(90, 90, 90),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(p.Width - 130, 26)
+            };
+            p.Controls.Add(lblStatus);
 
             return p;
+        }
+
+        private static void Draw3DRaised(Graphics g, Rectangle r, int depth = 2)
+        {
+            Color cWhite = Color.FromArgb(255, 255, 255);
+            Color cDark = Color.FromArgb(128, 128, 128);
+            Color cBlack = Color.FromArgb(0, 0, 0);
+
+            for (int i = 0; i < depth; i++)
+            {
+                Color topCol = (i == 0) ? cWhite : Color.FromArgb(223, 223, 223);
+                Color botCol = (i == 0) ? cBlack : cDark;
+
+                using (Pen pTop = new Pen(topCol))
+                {
+                    g.DrawLine(pTop, r.Left + i, r.Top + i, r.Right - i - 1, r.Top + i);
+                    g.DrawLine(pTop, r.Left + i, r.Top + i, r.Left + i, r.Bottom - i - 1);
+                }
+                using (Pen pBot = new Pen(botCol))
+                {
+                    g.DrawLine(pBot, r.Left + i, r.Bottom - i - 1, r.Right - i - 1, r.Bottom - i - 1);
+                    g.DrawLine(pBot, r.Right - i - 1, r.Top + i, r.Right - i - 1, r.Bottom - i - 1);
+                }
+            }
+        }
+
+        private static void Draw3DSunken(Graphics g, Rectangle r)
+        {
+            Color cWhite = Color.FromArgb(255, 255, 255);
+            Color cDark = Color.FromArgb(128, 128, 128);
+            Color cBlack = Color.FromArgb(0, 0, 0);
+
+            using (Pen pDark = new Pen(cDark))
+            {
+                g.DrawLine(pDark, r.Left, r.Top, r.Right - 1, r.Top);
+                g.DrawLine(pDark, r.Left, r.Top, r.Left, r.Bottom - 1);
+            }
+            using (Pen pBlack = new Pen(cBlack))
+            {
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+            }
+            using (Pen pWhite = new Pen(cWhite))
+            {
+                g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+            }
         }
 
         private static GraphicsPath RoundedRect(Rectangle rect, int radius)

@@ -12,12 +12,14 @@ namespace OmniBattery.UI
     public class OverlayForm : Form
     {
         private readonly BatteryManager _manager;
+        private List<BatteryDevice> _allConnectedDevices = new List<BatteryDevice>();
         private List<BatteryDevice> _devices = new List<BatteryDevice>();
 
         private bool _isDragging = false;
         private Point _dragStart;
         private Rectangle _closeBtnRect;
         private bool _isCloseHovered = false;
+        private bool _isHovered = false;
         private bool _isLocked = false;
 
         public event Action<bool> OverlayStateChanged;
@@ -30,7 +32,7 @@ namespace OmniBattery.UI
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(16, 18, 27);
+            BackColor = Color.FromArgb(14, 16, 22);
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9f);
             DoubleBuffered = true;
@@ -42,7 +44,6 @@ namespace OmniBattery.UI
 
             try { Icon = AppIconRenderer.CreateIcon(); } catch { }
 
-            // Restore opacity and position
             Opacity = Math.Max(0.3, Math.Min(1.0, _manager.Settings.OverlayOpacity / 100.0));
 
             int ox = _manager.Settings.OverlayX;
@@ -53,12 +54,9 @@ namespace OmniBattery.UI
             }
             else
             {
-                // Default: top-right corner of primary screen
                 Rectangle wa = Screen.PrimaryScreen.WorkingArea;
-                Location = new Point(wa.Right - 420, wa.Top + 40);
+                Location = new Point(wa.Right - 120, wa.Top + 24);
             }
-
-            BuildContextMenu();
 
             _manager.DevicesUpdated += OnDevicesUpdated;
             UpdateDevicesList(_manager.CurrentDevices);
@@ -69,8 +67,8 @@ namespace OmniBattery.UI
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE (não rouba foco de jogos ou vídeos)
-                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW (não polui o Alt+Tab)
+                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE (não rouba foco de jogos)
+                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW (não polui Alt+Tab)
                 cp.ExStyle |= 0x00000008; // WS_EX_TOPMOST
                 return cp;
             }
@@ -86,6 +84,45 @@ namespace OmniBattery.UI
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Renderer = new DarkToolStripRenderer();
 
+            // 1. Escolher Dispositivo para o Overlay
+            string txtDevSel = I18n.CurrentLanguage == AppLanguage.EN ? "Overlay Device" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Dispositivo en Overlay" : "Dispositivo no Overlay");
+            ToolStripMenuItem itemDevSel = new ToolStripMenuItem(txtDevSel);
+
+            string txtAllDevs = I18n.CurrentLanguage == AppLanguage.EN ? "All Devices" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Todos los dispositivos" : "Todos os dispositivos");
+            ToolStripMenuItem itAll = new ToolStripMenuItem(txtAllDevs);
+            itAll.Checked = string.IsNullOrEmpty(_manager.Settings.OverlaySelectedDeviceId);
+            itAll.Click += delegate
+            {
+                _manager.Settings.OverlaySelectedDeviceId = "";
+                _manager.Settings.Save();
+                UpdateDevicesList(_manager.CurrentDevices);
+            };
+            itemDevSel.DropDownItems.Add(itAll);
+            itemDevSel.DropDownItems.Add(new ToolStripSeparator());
+
+            if (_allConnectedDevices != null && _allConnectedDevices.Count > 0)
+            {
+                foreach (BatteryDevice d in _allConnectedDevices)
+                {
+                    BatteryDevice curD = d;
+                    ToolStripMenuItem itDev = new ToolStripMenuItem(curD.Name);
+                    itDev.Checked = string.Equals(_manager.Settings.OverlaySelectedDeviceId, curD.DeviceKey, StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(_manager.Settings.OverlaySelectedDeviceId, curD.Name, StringComparison.OrdinalIgnoreCase);
+                    itDev.Click += delegate
+                    {
+                        _manager.Settings.OverlaySelectedDeviceId = curD.DeviceKey;
+                        _manager.Settings.Save();
+                        UpdateDevicesList(_manager.CurrentDevices);
+                    };
+                    itemDevSel.DropDownItems.Add(itDev);
+                }
+            }
+            menu.Items.Add(itemDevSel);
+            menu.Items.Add(new ToolStripSeparator());
+
+            // 2. Alternar Orientação
             string txtOrient = I18n.CurrentLanguage == AppLanguage.EN ? "Toggle Orientation (Horizontal / Vertical)" :
                 (I18n.CurrentLanguage == AppLanguage.ES ? "Alternar Orientación (Horizontal / Vertical)" : "Alternar Orientação (Horizontal / Vertical)");
             ToolStripMenuItem itemOrient = new ToolStripMenuItem(txtOrient);
@@ -97,9 +134,7 @@ namespace OmniBattery.UI
             };
             menu.Items.Add(itemOrient);
 
-            ToolStripSeparator sep1 = new ToolStripSeparator();
-            menu.Items.Add(sep1);
-
+            // 3. Opacidade
             string txtOpacity = I18n.CurrentLanguage == AppLanguage.EN ? "Opacity" :
                 (I18n.CurrentLanguage == AppLanguage.ES ? "Opacidad" : "Opacidade");
             ToolStripMenuItem itemOpacity = new ToolStripMenuItem(txtOpacity);
@@ -108,16 +143,19 @@ namespace OmniBattery.UI
             {
                 int val = op;
                 ToolStripMenuItem it = new ToolStripMenuItem(val + "%");
+                it.Checked = (_manager.Settings.OverlayOpacity == val);
                 it.Click += delegate
                 {
                     _manager.Settings.OverlayOpacity = val;
                     Opacity = val / 100.0;
                     _manager.Settings.Save();
+                    BuildContextMenu();
                 };
                 itemOpacity.DropDownItems.Add(it);
             }
             menu.Items.Add(itemOpacity);
 
+            // 4. Bloquear Posição
             string txtLock = I18n.CurrentLanguage == AppLanguage.EN ? "Lock Position" :
                 (I18n.CurrentLanguage == AppLanguage.ES ? "Bloquear Posición" : "Bloquear Posição");
             ToolStripMenuItem itemLock = new ToolStripMenuItem(txtLock);
@@ -129,11 +167,11 @@ namespace OmniBattery.UI
             };
             menu.Items.Add(itemLock);
 
-            ToolStripSeparator sep2 = new ToolStripSeparator();
-            menu.Items.Add(sep2);
+            menu.Items.Add(new ToolStripSeparator());
 
+            // 5. Ocultar
             string txtClose = I18n.CurrentLanguage == AppLanguage.EN ? "Hide Overlay" :
-                (I18n.CurrentLanguage == AppLanguage.ES ? "Ocultar Superposición" : "Ocultar Sobreposição");
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Ocultar Overlay" : "Ocultar Overlay");
             ToolStripMenuItem itemClose = new ToolStripMenuItem(txtClose);
             itemClose.Click += delegate { HideOverlay(); };
             menu.Items.Add(itemClose);
@@ -152,7 +190,7 @@ namespace OmniBattery.UI
             UpdateDevicesList(devices);
         }
 
-        private void UpdateDevicesList(List<BatteryDevice> all)
+        public void UpdateDevicesList(List<BatteryDevice> all)
         {
             List<BatteryDevice> active = new List<BatteryDevice>();
             if (all != null)
@@ -166,7 +204,30 @@ namespace OmniBattery.UI
                 }
             }
 
-            _devices = active;
+            _allConnectedDevices = active;
+
+            // Filtro por dispositivo específico escolhido pelo usuário
+            string targetId = _manager.Settings.OverlaySelectedDeviceId;
+            if (!string.IsNullOrEmpty(targetId))
+            {
+                BatteryDevice found = active.Find(d => string.Equals(d.DeviceKey, targetId, StringComparison.OrdinalIgnoreCase)
+                                                    || string.Equals(d.Name, targetId, StringComparison.OrdinalIgnoreCase));
+                if (found != null)
+                {
+                    _devices = new List<BatteryDevice> { found };
+                }
+                else
+                {
+                    // Dispositivo selecionado não está online no momento
+                    _devices = active.Count > 0 ? new List<BatteryDevice> { active[0] } : new List<BatteryDevice>();
+                }
+            }
+            else
+            {
+                _devices = active;
+            }
+
+            BuildContextMenu();
             UpdateLayout();
         }
 
@@ -177,22 +238,24 @@ namespace OmniBattery.UI
 
             if (!isVert)
             {
-                // Horizontal layout
-                int itemW = 164;
-                int totalW = 44 + (count * itemW) + 20;
-                int totalH = 64;
+                // Layout Horizontal Ultracompacto Gamer
+                // Para 1 dispositivo: largura ~68px, altura 28px
+                // Para múltiplos: 56px por dispositivo + margens
+                int itemW = 56;
+                int totalW = (_devices.Count <= 1) ? 68 : (count * itemW + 12);
+                int totalH = 28;
                 Size = new Size(totalW, totalH);
             }
             else
             {
-                // Vertical layout
-                int itemH = 50;
-                int totalW = 210;
-                int totalH = 34 + (count * itemH) + 12;
+                // Layout Vertical Compacto
+                int itemH = 28;
+                int totalW = 68;
+                int totalH = Math.Max(28, count * itemH + 4);
                 Size = new Size(totalW, totalH);
             }
 
-            _closeBtnRect = new Rectangle(Width - 22, 6, 16, 16);
+            _closeBtnRect = new Rectangle(Width - 14, 2, 12, 12);
             Invalidate();
         }
 
@@ -213,7 +276,7 @@ namespace OmniBattery.UI
             _manager.Settings.OverlayEnabled = true;
             _manager.Settings.Save();
             Show();
-            UpdateLayout();
+            UpdateDevicesList(_manager.CurrentDevices);
             if (OverlayStateChanged != null) OverlayStateChanged(true);
         }
 
@@ -225,13 +288,28 @@ namespace OmniBattery.UI
             if (OverlayStateChanged != null) OverlayStateChanged(false);
         }
 
-        // ── Mouse Drag & Click ───────────────────────────────────────────────
+        // ── Mouse Drag & Hover ──────────────────────────────────────────────
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovered = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovered = false;
+            _isCloseHovered = false;
+            Invalidate();
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
             if (e.Button == MouseButtons.Left)
             {
-                if (_closeBtnRect.Contains(e.Location))
+                if (_isHovered && _closeBtnRect.Contains(e.Location))
                 {
                     HideOverlay();
                     return;
@@ -249,7 +327,7 @@ namespace OmniBattery.UI
         {
             base.OnMouseMove(e);
 
-            bool ch = _closeBtnRect.Contains(e.Location);
+            bool ch = _isHovered && _closeBtnRect.Contains(e.Location);
             if (ch != _isCloseHovered)
             {
                 _isCloseHovered = ch;
@@ -279,7 +357,7 @@ namespace OmniBattery.UI
             }
         }
 
-        // ── Paint HUD ────────────────────────────────────────────────────────
+        // ── Paint HUD Minimalista Gamer ─────────────────────────────────────
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -288,232 +366,136 @@ namespace OmniBattery.UI
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath bgp = RoundedRect(rect, 10))
+            int radius = Math.Min(12, Height / 2);
+
+            // 1. Fundo Pílula Translúcida Dark
+            using (GraphicsPath bgp = RoundedRect(rect, radius))
             {
-                using (SolidBrush bb = new SolidBrush(Color.FromArgb(235, 16, 18, 27))) g.FillPath(bb, bgp);
-                using (Pen bp = new Pen(Color.FromArgb(88, 101, 242), 1.4f)) g.DrawPath(bp, bgp);
+                using (SolidBrush bb = new SolidBrush(Color.FromArgb(195, 12, 14, 20)))
+                    g.FillPath(bb, bgp);
+                using (Pen bp = new Pen(Color.FromArgb(55, 255, 255, 255), 1f))
+                    g.DrawPath(bp, bgp);
             }
 
-            // Close button [x]
-            using (Font xf = new Font("Segoe UI", 8.5f, FontStyle.Bold))
-            {
-                Color xc = _isCloseHovered ? Color.FromArgb(255, 100, 100) : Color.FromArgb(110, 115, 140);
-                g.DrawString("x", xf, new SolidBrush(xc), _closeBtnRect.X, _closeBtnRect.Y);
-            }
-
-            bool isVert = _manager.Settings.OverlayVertical;
-
+            // 2. Dispositivos (Ícone + % Bateria)
             if (_devices.Count == 0)
             {
-                using (Font ef = new Font("Segoe UI", 8.5f))
+                // Estado sem dispositivos ativos
+                Rectangle iconR = new Rectangle(8, 6, 16, 16);
+                IconRenderer.DrawDeviceIcon(g, iconR, DeviceCategory.Generico, Color.FromArgb(140, 145, 165), null);
+
+                using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
+                using (SolidBrush pb = new SolidBrush(Color.FromArgb(140, 145, 165)))
                 {
-                    g.DrawString(I18n.T("OverlayNoDevices"), ef, new SolidBrush(Color.FromArgb(140, 145, 170)), 14, (Height - 16) / 2);
-                }
-                return;
-            }
-
-            if (!isVert)
-            {
-                // Horizontal layout
-                // Drag handle on left
-                using (Font hf = new Font("Segoe UI", 6.5f, FontStyle.Bold))
-                {
-                    g.DrawString("BATUJA", hf, new SolidBrush(Color.FromArgb(120, 130, 160)), 10, 14);
-                    g.DrawString("HUD", hf, new SolidBrush(Color.FromArgb(88, 101, 242)), 10, 26);
-                    g.DrawString(":::", hf, new SolidBrush(Color.FromArgb(90, 95, 125)), 12, 42);
-                }
-
-                int curX = 48;
-                int itemW = 164;
-                for (int i = 0; i < _devices.Count; i++)
-                {
-                    BatteryDevice dev = _devices[i];
-                    Color effCol = dev.GetEffectiveColor();
-
-                    // Device Icon
-                    Rectangle iconRect = new Rectangle(curX, 12, 40, 40);
-                    using (SolidBrush ib = new SolidBrush(Color.FromArgb(35, effCol))) g.FillEllipse(ib, iconRect);
-                    using (Pen ip = new Pen(Color.FromArgb(140, effCol), 1.2f)) g.DrawEllipse(ip, iconRect);
-                    IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
-
-                    // Segmented Battery (image 2 reference)
-                    int batX = curX + 46;
-                    int batY = 16;
-
-                    if (dev.IsWired)
-                    {
-                        using (Font pf = new Font("Segoe UI", 9f, FontStyle.Bold))
-                        {
-                            g.DrawString("⚡ " + I18n.T("WiredBadge"), pf, new SolidBrush(Color.FromArgb(120, 190, 240)), batX, batY + 2);
-                        }
-                    }
-                    else
-                    {
-                        // Segmented Battery (image 2 reference)
-                        DrawSegmentedBattery(g, new Rectangle(batX, batY, 48, 20), dev.BatteryPercent, dev.IsCharging, effCol, false);
-
-                        // Percentage
-                        using (Font pf = new Font("Segoe UI", 12f, FontStyle.Bold))
-                        {
-                            string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
-                            g.DrawString(pct, pf, new SolidBrush(effCol), batX + 54, batY - 1);
-                        }
-                    }
-
-                    // Short Name
-                    using (Font nf = new Font("Segoe UI", 7.5f))
-                    {
-                        string sname = dev.Name;
-                        if (sname.Length > 16) sname = sname.Substring(0, 14) + "...";
-                        g.DrawString(sname, nf, new SolidBrush(Color.FromArgb(180, 185, 205)), batX, batY + 23);
-                    }
-
-                    // Divider line
-                    if (i < _devices.Count - 1)
-                    {
-                        using (Pen dp = new Pen(Color.FromArgb(40, 45, 65), 1f))
-                        {
-                            g.DrawLine(dp, curX + itemW - 8, 14, curX + itemW - 8, Height - 14);
-                        }
-                    }
-
-                    curX += itemW;
+                    g.DrawString("--", pf, pb, 28, 5);
                 }
             }
             else
             {
-                // Vertical layout
-                using (Font hf = new Font("Segoe UI", 7f, FontStyle.Bold))
+                bool isVert = _manager.Settings.OverlayVertical;
+
+                if (!isVert)
                 {
-                    g.DrawString("BATUJA OVERLAY", hf, new SolidBrush(Color.FromArgb(88, 101, 242)), 14, 10);
-                }
+                    // Horizontal
+                    int curX = (_devices.Count == 1) ? 7 : 6;
+                    int itemW = (_devices.Count == 1) ? 54 : 54;
 
-                int curY = 30;
-                int itemH = 50;
-                for (int i = 0; i < _devices.Count; i++)
-                {
-                    BatteryDevice dev = _devices[i];
-                    Color effCol = dev.GetEffectiveColor();
-
-                    // Device Icon
-                    Rectangle iconRect = new Rectangle(14, curY + 5, 36, 36);
-                    using (SolidBrush ib = new SolidBrush(Color.FromArgb(35, effCol))) g.FillEllipse(ib, iconRect);
-                    using (Pen ip = new Pen(Color.FromArgb(140, effCol), 1.2f)) g.DrawEllipse(ip, iconRect);
-                    IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
-
-                    // Segmented Battery or Wired Notice
-                    int batX = 58;
-                    int batY = curY + 7;
-
-                    if (dev.IsWired)
+                    for (int i = 0; i < _devices.Count; i++)
                     {
-                        using (Font pf = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+                        BatteryDevice dev = _devices[i];
+                        Color effCol = dev.GetEffectiveColor();
+
+                        // Ícone do dispositivo
+                        Rectangle iconRect = new Rectangle(curX, (Height - 16) / 2, 16, 16);
+                        IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
+
+                        // Texto de Bateria / USB
+                        string txt;
+                        Color txtColor;
+                        if (dev.IsWired)
                         {
-                            g.DrawString("⚡ " + I18n.T("WiredBadge"), pf, new SolidBrush(Color.FromArgb(120, 190, 240)), batX, batY + 1);
+                            txt = "USB";
+                            txtColor = Color.FromArgb(100, 200, 255);
                         }
-                    }
-                    else
-                    {
-                        DrawSegmentedBattery(g, new Rectangle(batX, batY, 44, 18), dev.BatteryPercent, dev.IsCharging, effCol, false);
-
-                        // Percentage
-                        using (Font pf = new Font("Segoe UI", 11f, FontStyle.Bold))
+                        else
                         {
-                            string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
-                            g.DrawString(pct, pf, new SolidBrush(effCol), batX + 49, batY - 1);
+                            txt = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                            if (dev.BatteryPercent >= 0 && dev.BatteryPercent <= 20)
+                                txtColor = Color.FromArgb(255, 80, 80);
+                            else
+                                txtColor = effCol;
                         }
-                    }
 
-                    // Short Name
-                    using (Font nf = new Font("Segoe UI", 7.2f))
-                    {
-                        string sname = dev.Name;
-                        if (sname.Length > 20) sname = sname.Substring(0, 18) + "...";
-                        g.DrawString(sname, nf, new SolidBrush(Color.FromArgb(170, 175, 195)), batX, batY + 20);
-                    }
+                        using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
+                        using (SolidBrush pb = new SolidBrush(txtColor))
+                        {
+                            g.DrawString(txt, pf, pb, curX + 18, (Height - 17) / 2);
+                        }
 
-                    curY += itemH;
-                }
-            }
-        }
+                        // Divisor sutil entre múltiplos dispositivos
+                        if (i < _devices.Count - 1)
+                        {
+                            using (Pen dp = new Pen(Color.FromArgb(45, 255, 255, 255), 1f))
+                            {
+                                int sepX = curX + itemW;
+                                g.DrawLine(dp, sepX, 5, sepX, Height - 6);
+                            }
+                        }
 
-        public static void DrawSegmentedBattery(Graphics g, Rectangle r, int percent, bool isCharging, Color fillCol, bool isWired = false)
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            int termW = 3;
-            int termH = (int)(r.Height * 0.44f);
-            int bodyW = r.Width - termW - 2;
-            int bodyH = r.Height;
-
-            Rectangle bodyRect = new Rectangle(r.X, r.Y, bodyW, bodyH);
-            Rectangle termRect = new Rectangle(r.X + bodyW + 1, r.Y + (bodyH - termH) / 2, termW, termH);
-
-            int radius = Math.Max(2, bodyH / 5);
-
-            // Outer battery body border
-            using (GraphicsPath bp = RoundedRect(bodyRect, radius))
-            using (Pen pen = new Pen(Color.FromArgb(180, 190, 215), 1.8f))
-            {
-                g.DrawPath(pen, bp);
-            }
-
-            // Terminal tab
-            using (GraphicsPath tp = RoundedRect(termRect, 1))
-            using (SolidBrush tb = new SolidBrush(Color.FromArgb(180, 190, 215)))
-            {
-                g.FillPath(tb, tp);
-            }
-
-            // Segments
-            int totalSegments = 6;
-            int padX = 3;
-            int padY = 3;
-            int innerW = bodyW - (padX * 2);
-            int innerH = bodyH - (padY * 2);
-            int segSpacing = 2;
-            int segW = (innerW - (totalSegments - 1) * segSpacing) / totalSegments;
-
-            int activeSegments = 0;
-            if (isWired)
-            {
-                activeSegments = totalSegments;
-            }
-            else if (percent > 0)
-            {
-                activeSegments = (int)Math.Round((Math.Min(100, percent) / 100.0) * totalSegments);
-                if (activeSegments == 0 && percent > 0) activeSegments = 1;
-            }
-
-            for (int i = 0; i < totalSegments; i++)
-            {
-                int segX = r.X + padX + i * (segW + segSpacing);
-                int segY = r.Y + padY;
-                Rectangle segRect = new Rectangle(segX, segY, segW, innerH);
-
-                if (i < activeSegments)
-                {
-                    using (GraphicsPath sp = RoundedRect(segRect, 1))
-                    using (SolidBrush sb = new SolidBrush(fillCol))
-                    {
-                        g.FillPath(sb, sp);
+                        curX += itemW + 4;
                     }
                 }
                 else
                 {
-                    using (GraphicsPath sp = RoundedRect(segRect, 1))
-                    using (SolidBrush sb = new SolidBrush(Color.FromArgb(40, 48, 70)))
+                    // Vertical
+                    int curY = 4;
+                    int itemH = 28;
+
+                    for (int i = 0; i < _devices.Count; i++)
                     {
-                        g.FillPath(sb, sp);
+                        BatteryDevice dev = _devices[i];
+                        Color effCol = dev.GetEffectiveColor();
+
+                        Rectangle iconRect = new Rectangle(8, curY + 6, 16, 16);
+                        IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
+
+                        string txt;
+                        Color txtColor;
+                        if (dev.IsWired)
+                        {
+                            txt = "USB";
+                            txtColor = Color.FromArgb(100, 200, 255);
+                        }
+                        else
+                        {
+                            txt = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                            if (dev.BatteryPercent >= 0 && dev.BatteryPercent <= 20)
+                                txtColor = Color.FromArgb(255, 80, 80);
+                            else
+                                txtColor = effCol;
+                        }
+
+                        using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
+                        using (SolidBrush pb = new SolidBrush(txtColor))
+                        {
+                            g.DrawString(txt, pf, pb, 28, curY + 5);
+                        }
+
+                        curY += itemH;
                     }
                 }
             }
 
-            if (isCharging)
+            // 3. Botão Fechar [x] sutil somente ao passar o mouse
+            if (_isHovered)
             {
-                using (Font pf = new Font("Segoe UI", 7f, FontStyle.Bold))
+                using (Font xf = new Font("Segoe UI", 7.5f, FontStyle.Bold))
                 {
-                    g.DrawString("⚡", pf, Brushes.Cyan, r.Right + 3, r.Y + 1);
+                    Color xc = _isCloseHovered ? Color.FromArgb(255, 100, 100) : Color.FromArgb(130, 135, 160);
+                    using (SolidBrush xb = new SolidBrush(xc))
+                    {
+                        g.DrawString("×", xf, xb, _closeBtnRect.X, _closeBtnRect.Y - 1);
+                    }
                 }
             }
         }

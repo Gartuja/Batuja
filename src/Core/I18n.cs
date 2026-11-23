@@ -93,13 +93,14 @@ namespace OmniBattery.Core
             // Header Buttons
             Reg("BtnAdmin", "Admin", "Admin", "Admin");
             Reg("BtnBackground", "Fundo", "Background", "Fondo");
-            Reg("BtnOverlay", "Sobrepor", "Overlay", "Superponer");
-            Reg("BtnOverlayActive", "● Sobrepor", "● Overlay", "● Superponer");
+            Reg("BtnOverlay", "Overlay", "Overlay", "Overlay");
+            Reg("BtnOverlayActive", "● Overlay", "● Overlay", "● Overlay");
             Reg("BtnHistory", "Histórico", "History", "Historial");
             Reg("BtnRefresh", "Atualizar", "Refresh", "Actualizar");
             Reg("BtnScanning", "Buscando dispositivos...", "Searching devices...", "Buscando dispositivos...");
             Reg("BtnSettings", "Configs", "Settings", "Ajustes");
             Reg("BtnLanguage", "Idioma", "Language", "Idioma");
+            Reg("RemoveBackground", "Remover plano de fundo atual", "Remove current background", "Quitar fondo actual");
 
             // Device Card
             Reg("IconOn", "● Ícone Ligado", "● Icon On", "● Ícono Activado");
