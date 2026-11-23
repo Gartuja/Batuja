@@ -5,21 +5,32 @@ using System.Windows.Forms;
 
 namespace OmniBattery.UI
 {
+    public enum ButtonIconType
+    {
+        None,
+        Gear,
+        Refresh,
+        History,
+        Overlay,
+        Palette,
+        Shield
+    }
+
     /// <summary>
-    /// Botão com estética AeroGlass moderna e fluida:
-    /// Cantos suavemente arredondados (radius 8px), gradiente translúcido contínuo,
-    /// linha de destaque de cristal no topo e suporte nativo ao ícone vetorial de engrenagem.
-    /// Renderização 100% anti-aliased sem serrilhamento ou recortes por máscara de 1-bit.
+    /// Botão com estética AeroGlass moderna, fluida e tátil:
+    /// Cantos arredondados (radius 9px), gradiente vítreo translúcido,
+    /// linha de destaque de cristal no topo, halo sutil ao passar o mouse
+    /// e suporte nativo a ícones vetoriais anti-aliased (engrenagem, atualizar, histórico, sobrepor, etc.).
     /// </summary>
     public class AeroGlassButton : Button
     {
         private bool _isHovered = false;
         private bool _isPressed = false;
-        private int _cornerRadius = 8;
+        private int _cornerRadius = 9;
         private Color _baseColor;
         private Color _accentColor;
         private bool _useAccentBorder = false;
-        private bool _showGearIcon = false;
+        private ButtonIconType _iconType = ButtonIconType.None;
 
         public int CornerRadius
         {
@@ -45,10 +56,16 @@ namespace OmniBattery.UI
             set { _useAccentBorder = value; Invalidate(); }
         }
 
+        public ButtonIconType IconType
+        {
+            get { return _iconType; }
+            set { _iconType = value; Invalidate(); }
+        }
+
         public bool ShowGearIcon
         {
-            get { return _showGearIcon; }
-            set { _showGearIcon = value; Invalidate(); }
+            get { return _iconType == ButtonIconType.Gear; }
+            set { if (value) _iconType = ButtonIconType.Gear; else if (_iconType == ButtonIconType.Gear) _iconType = ButtonIconType.None; Invalidate(); }
         }
 
         public AeroGlassButton()
@@ -59,12 +76,12 @@ namespace OmniBattery.UI
                      ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
 
-            _cornerRadius = 8;
-            _baseColor = Color.FromArgb(36, 42, 64);
+            _cornerRadius = 9;
+            _baseColor = Color.FromArgb(34, 40, 62);
             _accentColor = Color.FromArgb(88, 101, 242);
             BackColor = Color.Transparent;
             ForeColor = Color.White;
-            Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            Font = new Font("Segoe UI", 8.8f, FontStyle.Bold);
             Cursor = Cursors.Hand;
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
@@ -72,10 +89,8 @@ namespace OmniBattery.UI
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
         {
-            // Não desenha fundo quadrado nativo de botão para evitar artefatos nos cantos
             if (Parent != null)
             {
-                // Deixa o painel pai pintar o fundo sob o botão
                 InvokePaintBackground(Parent, pevent);
             }
             else
@@ -131,15 +146,15 @@ namespace OmniBattery.UI
 
             using (GraphicsPath path = CreateRoundedRectPath(rect, _cornerRadius))
             {
-                // Paleta de gradiente vítreo suave
+                // Paleta de gradiente vítreo moderna
                 Color c = _baseColor;
                 Color topColor;
                 Color bottomColor;
 
                 if (!Enabled)
                 {
-                    topColor = Color.FromArgb(38, 42, 56);
-                    bottomColor = Color.FromArgb(24, 28, 38);
+                    topColor = Color.FromArgb(36, 40, 54);
+                    bottomColor = Color.FromArgb(22, 25, 36);
                 }
                 else if (_isPressed)
                 {
@@ -148,12 +163,12 @@ namespace OmniBattery.UI
                 }
                 else if (_isHovered)
                 {
-                    topColor = Color.FromArgb(Math.Min(255, c.R + 40), Math.Min(255, c.G + 40), Math.Min(255, c.B + 50));
-                    bottomColor = Color.FromArgb(Math.Min(255, c.R + 15), Math.Min(255, c.G + 15), Math.Min(255, c.B + 20));
+                    topColor = Color.FromArgb(Math.Min(255, c.R + 45), Math.Min(255, c.G + 45), Math.Min(255, c.B + 55));
+                    bottomColor = Color.FromArgb(Math.Min(255, c.R + 18), Math.Min(255, c.G + 18), Math.Min(255, c.B + 24));
                 }
                 else
                 {
-                    topColor = Color.FromArgb(Math.Min(255, c.R + 25), Math.Min(255, c.G + 25), Math.Min(255, c.B + 30));
+                    topColor = Color.FromArgb(Math.Min(255, c.R + 25), Math.Min(255, c.G + 25), Math.Min(255, c.B + 32));
                     bottomColor = Color.FromArgb(Math.Max(0, c.R - 10), Math.Max(0, c.G - 10), Math.Max(0, c.B - 10));
                 }
 
@@ -163,14 +178,14 @@ namespace OmniBattery.UI
                     g.FillPath(bgBrush, path);
                 }
 
-                // 2. Linha de brilho especular suave na borda superior interna
-                int shineAlpha = _isHovered ? 70 : 45;
+                // 2. Linha de destaque especular de cristal no topo interno
+                int shineAlpha = _isHovered ? 85 : 50;
                 using (Pen topShinePen = new Pen(Color.FromArgb(shineAlpha, 255, 255, 255), 1f))
                 {
                     g.DrawLine(topShinePen, rect.X + _cornerRadius, rect.Y + 1.2f, rect.Right - _cornerRadius, rect.Y + 1.2f);
                 }
 
-                // 3. Borda de cristal
+                // 3. Borda de cristal com suporte a cor de destaque
                 Color borderColor;
                 if (!Enabled)
                 {
@@ -180,13 +195,13 @@ namespace OmniBattery.UI
                 {
                     borderColor = _useAccentBorder
                         ? Color.FromArgb(240, _accentColor)
-                        : Color.FromArgb(120, 255, 255, 255);
+                        : Color.FromArgb(130, 255, 255, 255);
                 }
                 else
                 {
                     borderColor = _useAccentBorder
                         ? Color.FromArgb(160, _accentColor)
-                        : Color.FromArgb(45, 255, 255, 255);
+                        : Color.FromArgb(48, 255, 255, 255);
                 }
 
                 using (Pen borderPen = new Pen(borderColor, 1f))
@@ -194,27 +209,25 @@ namespace OmniBattery.UI
                     g.DrawPath(borderPen, path);
                 }
 
-                // 4. Texto e Ícone de Engrenagem
+                // 4. Texto e Ícone Vetorial
                 Color textColor = !Enabled ? Color.FromArgb(120, 130, 155) : ForeColor;
+                float offsetY = _isPressed ? 1f : 0f;
 
-                if (_showGearIcon)
+                if (_iconType != ButtonIconType.None)
                 {
                     SizeF textSize = g.MeasureString(Text, Font);
-                    float gearOuterR = 5.2f;
-                    float gearInnerR = 3.6f;
-                    float gearHoleR = 1.8f;
-                    float gearDiameter = gearOuterR * 2f;
-                    float gap = 6f;
-                    float totalWidth = gearDiameter + gap + textSize.Width;
+                    float iconDiameter = 13f;
+                    float gap = 7f;
+                    float totalContentWidth = iconDiameter + gap + textSize.Width;
 
-                    float startX = (Width - totalWidth) / 2f;
-                    float gearCx = startX + gearOuterR;
-                    float gearCy = Height / 2f;
+                    float startX = (Width - totalContentWidth) / 2f;
+                    float iconCx = startX + (iconDiameter / 2f);
+                    float iconCy = (Height / 2f) + offsetY;
 
-                    DrawGearIcon(g, gearCx, gearCy, gearOuterR, gearInnerR, gearHoleR, 6, textColor);
+                    DrawVectorIcon(g, _iconType, iconCx, iconCy, textColor);
 
-                    float textX = startX + gearDiameter + gap;
-                    float textY = (Height - textSize.Height) / 2f;
+                    float textX = startX + iconDiameter + gap;
+                    float textY = ((Height - textSize.Height) / 2f) + offsetY;
                     using (SolidBrush textBrush = new SolidBrush(textColor))
                     {
                         g.DrawString(Text, Font, textBrush, textX, textY);
@@ -222,6 +235,7 @@ namespace OmniBattery.UI
                 }
                 else
                 {
+                    RectangleF textRect = new RectangleF(rect.X, rect.Y + offsetY, rect.Width, rect.Height);
                     StringFormat sf = new StringFormat
                     {
                         Alignment = StringAlignment.Center,
@@ -229,9 +243,89 @@ namespace OmniBattery.UI
                     };
                     using (SolidBrush textBrush = new SolidBrush(textColor))
                     {
-                        g.DrawString(Text, Font, textBrush, rect, sf);
+                        g.DrawString(Text, Font, textBrush, textRect, sf);
                     }
                 }
+            }
+        }
+
+        private static void DrawVectorIcon(Graphics g, ButtonIconType type, float cx, float cy, Color color)
+        {
+            switch (type)
+            {
+                case ButtonIconType.Gear:
+                    DrawGearIcon(g, cx, cy, 5.5f, 3.8f, 1.9f, 6, color);
+                    break;
+
+                case ButtonIconType.Refresh:
+                    using (Pen pen = new Pen(color, 1.7f))
+                    {
+                        pen.StartCap = LineCap.Round;
+                        pen.EndCap = LineCap.Round;
+                        g.DrawArc(pen, cx - 5.5f, cy - 5.5f, 11f, 11f, 35f, 260f);
+                    }
+                    using (SolidBrush b = new SolidBrush(color))
+                    {
+                        PointF[] arrow = new PointF[] {
+                            new PointF(cx + 6f, cy - 4.5f),
+                            new PointF(cx + 1.5f, cy - 7f),
+                            new PointF(cx + 2.5f, cy - 1.5f)
+                        };
+                        g.FillPolygon(b, arrow);
+                    }
+                    break;
+
+                case ButtonIconType.History:
+                    using (Pen pen = new Pen(color, 1.5f))
+                    {
+                        g.DrawEllipse(pen, cx - 6f, cy - 6f, 12f, 12f);
+                        g.DrawLine(pen, cx, cy, cx, cy - 3.5f);
+                        g.DrawLine(pen, cx, cy, cx + 2.5f, cy);
+                    }
+                    break;
+
+                case ButtonIconType.Overlay:
+                    using (Pen pen = new Pen(color, 1.4f))
+                    {
+                        g.DrawRectangle(pen, cx - 6.5f, cy - 5f, 13f, 10f);
+                        g.DrawLine(pen, cx - 6.5f, cy + 2f, cx + 6.5f, cy + 2f);
+                    }
+                    using (SolidBrush b = new SolidBrush(color))
+                        g.FillEllipse(b, cx + 2.2f, cy - 3.5f, 2.2f, 2.2f);
+                    break;
+
+                case ButtonIconType.Palette:
+                    using (Pen pen = new Pen(color, 1.4f))
+                    {
+                        g.DrawRectangle(pen, cx - 6f, cy - 5f, 12f, 10f);
+                    }
+                    using (SolidBrush b = new SolidBrush(color))
+                    {
+                        g.FillEllipse(b, cx - 3.5f, cy - 3f, 2.5f, 2.5f);
+                        PointF[] pts = new PointF[] {
+                            new PointF(cx - 6f, cy + 5f),
+                            new PointF(cx - 1.5f, cy + 0.5f),
+                            new PointF(cx + 1.5f, cy + 2.5f),
+                            new PointF(cx + 4.5f, cy - 0.5f),
+                            new PointF(cx + 6f, cy + 0.5f),
+                            new PointF(cx + 6f, cy + 5f)
+                        };
+                        g.FillPolygon(b, pts);
+                    }
+                    break;
+
+                case ButtonIconType.Shield:
+                    using (GraphicsPath sp = new GraphicsPath())
+                    {
+                        sp.AddLine(cx - 5.5f, cy - 5.5f, cx + 5.5f, cy - 5.5f);
+                        sp.AddLine(cx + 5.5f, cy - 5.5f, cx + 5.5f, cy);
+                        sp.AddBezier(cx + 5.5f, cy, cx + 4.5f, cy + 4.8f, cx, cy + 6.8f, cx, cy + 6.8f);
+                        sp.AddBezier(cx, cy + 6.8f, cx - 4.5f, cy + 4.8f, cx - 5.5f, cy, cx - 5.5f, cy);
+                        sp.CloseFigure();
+                        using (Pen pen = new Pen(color, 1.4f))
+                            g.DrawPath(pen, sp);
+                    }
+                    break;
             }
         }
 
