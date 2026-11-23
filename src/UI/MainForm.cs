@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
 using OmniBattery.Core;
@@ -13,11 +14,22 @@ namespace OmniBattery.UI
 {
     public class MainForm : Form
     {
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HTCAPTION = 0x2;
+
         private readonly BatteryManager _manager;
         private TrayManager _trayManager;
         private OverlayForm _overlayForm;
 
         // Layout panels
+        private Panel _titleBarPanel;
+        private int _trafficHover = 0; // 0: none, 1: red, 2: yellow, 3: green
         private Panel _headerPanel;
         private Panel _footerPanel;
         private BgScrollPanel _scrollPanel;      // Outer panel: handles background + scrollbar
@@ -99,8 +111,9 @@ namespace OmniBattery.UI
         private void InitializeFormStyle()
         {
             Text = I18n.T("AppTitle");
-            Size = new Size(960, 650);
-            MinimumSize = new Size(860, 520);
+            Size = new Size(1000, 580);
+            MinimumSize = new Size(860, 500);
+            FormBorderStyle = FormBorderStyle.None;
             BackColor = Color.FromArgb(14, 16, 26);
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9f, FontStyle.Regular);
@@ -115,10 +128,121 @@ namespace OmniBattery.UI
         {
             SuspendLayout();
 
-            // ── Header Panel com estética AeroGlass ──────────────────────────
+            // ── 0. Custom TitleBar com botões de semáforo (Traffic Lights) ────
+            _titleBarPanel = new Panel
+            {
+                BackColor = Color.FromArgb(18, 21, 33),
+                Height = 32
+            };
+            _titleBarPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+                Rectangle r = _titleBarPanel.ClientRectangle;
+                if (r.Width <= 0 || r.Height <= 0) return;
+
+                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(18, 21, 33), Color.FromArgb(14, 16, 26), 90f))
+                    g.FillRectangle(lgb, r);
+
+                // Pequeno ícone do mouse na esquerda
+                try
+                {
+                    Rectangle iconBox = new Rectangle(12, 8, 16, 16);
+                    IconRenderer.DrawDeviceIcon(g, iconBox, DeviceCategory.Mouse, Color.FromArgb(160, 190, 255), null);
+                }
+                catch { }
+
+                // Título da janela
+                using (Font tf = new Font("Segoe UI", 9f))
+                {
+                    g.DrawString("Batuja - Monitor de Dispositivos sem Fio", tf, new SolidBrush(Color.FromArgb(145, 155, 180)), 34, 7);
+                }
+
+                // Botões de semáforo (Vermelho, Amarelo, Verde) no canto direito
+                int tlY = 10;
+                int tlD = 12;
+                int redX = r.Width - 58;
+                int yelX = r.Width - 40;
+                int grnX = r.Width - 22;
+
+                // Vermelho (Fechar / Minimizar para bandeja)
+                Color redC = _trafficHover == 1 ? Color.FromArgb(255, 60, 50) : Color.FromArgb(255, 95, 86);
+                using (SolidBrush b = new SolidBrush(redC)) g.FillEllipse(b, redX, tlY, tlD, tlD);
+
+                // Amarelo (Minimizar)
+                Color yelC = _trafficHover == 2 ? Color.FromArgb(255, 165, 0) : Color.FromArgb(255, 189, 46);
+                using (SolidBrush b = new SolidBrush(yelC)) g.FillEllipse(b, yelX, tlY, tlD, tlD);
+
+                // Verde (Maximizar / Restaurar)
+                Color grnC = _trafficHover == 3 ? Color.FromArgb(45, 225, 75) : Color.FromArgb(39, 201, 63);
+                using (SolidBrush b = new SolidBrush(grnC)) g.FillEllipse(b, grnX, tlY, tlD, tlD);
+            };
+
+            _titleBarPanel.MouseDown += delegate(object sender, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    int rW = _titleBarPanel.Width;
+                    int redX = rW - 58, yelX = rW - 40, grnX = rW - 22;
+                    int tlY = 10, tlD = 12;
+
+                    if (new Rectangle(redX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    {
+                        Close();
+                    }
+                    else if (new Rectangle(yelX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    {
+                        WindowState = FormWindowState.Minimized;
+                    }
+                    else if (new Rectangle(grnX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    {
+                        WindowState = (WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized);
+                    }
+                    else
+                    {
+                        ReleaseCapture();
+                        SendMessage(Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                    }
+                }
+            };
+
+            _titleBarPanel.MouseMove += delegate(object sender, MouseEventArgs e)
+            {
+                int rW = _titleBarPanel.Width;
+                int redX = rW - 58, yelX = rW - 40, grnX = rW - 22;
+                int tlY = 10, tlD = 12;
+                int newH = 0;
+
+                if (new Rectangle(redX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 1;
+                else if (new Rectangle(yelX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 2;
+                else if (new Rectangle(grnX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 3;
+
+                if (newH != _trafficHover)
+                {
+                    _trafficHover = newH;
+                    _titleBarPanel.Cursor = (newH > 0) ? Cursors.Hand : Cursors.Default;
+                    _titleBarPanel.Invalidate();
+                }
+            };
+
+            _titleBarPanel.MouseLeave += delegate
+            {
+                if (_trafficHover != 0)
+                {
+                    _trafficHover = 0;
+                    _titleBarPanel.Cursor = Cursors.Default;
+                    _titleBarPanel.Invalidate();
+                }
+            };
+
+            Controls.Add(_titleBarPanel);
+
+            // ── 1. Header Panel com estética AeroGlass ──────────────────────────
             _headerPanel = new Panel
             {
-                BackColor = Color.FromArgb(24, 28, 44),
+                BackColor = Color.FromArgb(22, 26, 40),
                 Padding = new Padding(0)
             };
             _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
@@ -129,22 +253,41 @@ namespace OmniBattery.UI
                 if (r.Width <= 0 || r.Height <= 0) return;
 
                 // Fundo gradiente vítreo profundo
-                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(24, 28, 44), Color.FromArgb(16, 18, 28), 90f))
+                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(22, 26, 40), Color.FromArgb(16, 18, 28), 90f))
                     g.FillRectangle(lgb, r);
 
-                // Brilho de cristal sutil no topo
-                using (Pen tp = new Pen(Color.FromArgb(45, 255, 255, 255), 1f))
-                    g.DrawLine(tp, 0, 0, r.Width, 0);
-
                 // Linha de divisão inferior elegante
-                using (Pen bp = new Pen(Color.FromArgb(35, 255, 255, 255), 1f))
+                using (Pen bp = new Pen(Color.FromArgb(30, 255, 255, 255), 1f))
                     g.DrawLine(bp, 0, r.Height - 1, r.Width, r.Height - 1);
+
+                // Brilho azul neon difuso atrás do logotipo do mouse
+                int logoX = 18, logoY = 10;
+                using (GraphicsPath lgp = new GraphicsPath())
+                {
+                    lgp.AddEllipse(logoX - 10, logoY - 10, 54, 54);
+                    using (PathGradientBrush lpb = new PathGradientBrush(lgp))
+                    {
+                        lpb.CenterColor = Color.FromArgb(110, 0, 160, 255);
+                        lpb.SurroundColors = new Color[] { Color.Transparent };
+                        g.FillPath(lpb, lgp);
+                    }
+                }
+            };
+
+            // Permite arrastar janela clicando no cabeçalho também
+            _headerPanel.MouseDown += delegate(object sender, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                }
             };
 
             PictureBox pbLogo = new PictureBox
             {
                 Size = new Size(34, 34),
-                Location = new Point(16, 17),
+                Location = new Point(18, 10),
                 BackColor = Color.Transparent,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
@@ -158,7 +301,7 @@ namespace OmniBattery.UI
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(54, 18)
+                Location = new Point(62, 11)
             };
             _headerPanel.Controls.Add(lblTitle);
 
@@ -169,10 +312,10 @@ namespace OmniBattery.UI
                 ForeColor = Color.FromArgb(195, 210, 255),
                 BackColor = Color.Transparent,
                 AutoSize = false,
-                Size = new Size(165, 24),
+                Size = new Size(160, 22),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(22, 0, 0, 0),
-                Location = new Point(156, 22)
+                Location = new Point(164, 16)
             };
             _lblDeviceCount.Paint += delegate(object sender, PaintEventArgs e)
             {
@@ -186,18 +329,18 @@ namespace OmniBattery.UI
                 Rectangle cr = new Rectangle(0, 0, _lblDeviceCount.Width - 1, _lblDeviceCount.Height - 1);
                 using (GraphicsPath cp = CreateRoundedRect(cr, 11))
                 {
-                    using (SolidBrush cb = new SolidBrush(Color.FromArgb(28, 34, 56)))
+                    using (SolidBrush cb = new SolidBrush(Color.FromArgb(26, 30, 48)))
                         g.FillPath(cb, cp);
-                    using (Pen cpen = new Pen(Color.FromArgb(55, 68, 110), 1f))
+                    using (Pen cpen = new Pen(Color.FromArgb(48, 58, 90), 1f))
                         g.DrawPath(cpen, cp);
                 }
 
                 // LED dot pulsante verde
                 using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
-                    g.FillEllipse(dotB, 8, 8, 8, 8);
+                    g.FillEllipse(dotB, 8, 7, 8, 8);
 
                 // Texto do contador com renderização nítida
-                Rectangle tr = new Rectangle(22, 1, _lblDeviceCount.Width - 26, _lblDeviceCount.Height - 2);
+                Rectangle tr = new Rectangle(22, 0, _lblDeviceCount.Width - 26, _lblDeviceCount.Height);
                 TextRenderer.DrawText(g, _lblDeviceCount.Text, _lblDeviceCount.Font, tr,
                     Color.FromArgb(205, 220, 255),
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
@@ -239,9 +382,9 @@ namespace OmniBattery.UI
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
-            _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(88, 101, 242));
+            _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(34, 40, 62));
             _btnRefresh.Size = new Size(98, 34);
-            _btnRefresh.AccentColor = Color.FromArgb(140, 160, 255);
+            _btnRefresh.AccentColor = Color.FromArgb(120, 150, 255);
             _btnRefresh.IconType = ButtonIconType.Refresh;
             _btnRefresh.UseAccentBorder = true;
             _btnRefresh.Click += delegate { _manager.TriggerScanAsync(); };
@@ -320,7 +463,7 @@ namespace OmniBattery.UI
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
-                Padding = new Padding(16, 16, 16, 16)
+                Padding = new Padding(12, 14, 12, 14)
             };
             _scrollPanel.Controls.Add(_cardsFlow);
 
@@ -349,6 +492,21 @@ namespace OmniBattery.UI
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            if (WindowState == FormWindowState.Normal)
+            {
+                try
+                {
+                    using (GraphicsPath p = CreateRoundedRect(new Rectangle(0, 0, Width, Height), 12))
+                    {
+                        Region = new Region(p);
+                    }
+                }
+                catch { }
+            }
+            else
+            {
+                Region = null;
+            }
             Relayout();
         }
 
@@ -357,19 +515,22 @@ namespace OmniBattery.UI
             if (_headerPanel == null || _footerPanel == null || _scrollPanel == null)
                 return;
 
-            const int HEADER_H = 68;
-            const int FOOTER_H = 38;
+            const int TITLE_H = 32;
+            const int HEADER_H = 54;
+            const int FOOTER_H = 36;
 
             int cw = ClientSize.Width;
             int ch = ClientSize.Height;
             if (cw <= 0 || ch <= 0) return;
 
-            // Header: full top
-            _headerPanel.SetBounds(0, 0, cw, HEADER_H);
+            if (_titleBarPanel != null)
+                _titleBarPanel.SetBounds(0, 0, cw, TITLE_H);
 
-            // Reposition header buttons right-aligned
+            _headerPanel.SetBounds(0, TITLE_H, cw, HEADER_H);
+
+            // Reposition header buttons right-aligned inside header
             if (_btnRefresh != null)
-                _btnRefresh.Width = _isScanning ? 180 : 98;
+                _btnRefresh.Width = _isScanning ? 175 : 98;
 
             int btnX = cw - 14;
             AeroGlassButton[] buttons = new[]
@@ -381,20 +542,20 @@ namespace OmniBattery.UI
             {
                 if (btn == null) continue;
                 btnX -= btn.Width + 6;
-                btn.Location = new Point(btnX, 17);
+                btn.Location = new Point(btnX, 10);
             }
 
             // Reposition device counter badge safely so it never overlaps buttons
             if (_lblDeviceCount != null)
             {
-                int leftPos = 146;
-                _lblDeviceCount.Location = new Point(leftPos, 22);
+                int leftPos = 164;
+                _lblDeviceCount.Location = new Point(leftPos, 16);
                 if (!string.IsNullOrEmpty(_lblDeviceCount.Text))
                 {
                     using (Graphics g = CreateGraphics())
                     {
                         SizeF sz = g.MeasureString(_lblDeviceCount.Text, _lblDeviceCount.Font);
-                        _lblDeviceCount.Width = Math.Max(110, (int)sz.Width + 28);
+                        _lblDeviceCount.Width = Math.Max(120, (int)sz.Width + 28);
                     }
                     _lblDeviceCount.Visible = (btnX >= leftPos + _lblDeviceCount.Width + 4);
                 }
@@ -409,11 +570,11 @@ namespace OmniBattery.UI
 
             // Footer checkbox right-aligned
             if (_chkMinimize != null)
-                _chkMinimize.Location = new Point(cw - _chkMinimize.Width - 16, 10);
+                _chkMinimize.Location = new Point(cw - _chkMinimize.Width - 16, 9);
 
             // Scroll area: everything between header and footer
-            int scrollH = Math.Max(60, ch - HEADER_H - FOOTER_H);
-            _scrollPanel.SetBounds(0, HEADER_H, cw, scrollH);
+            int scrollH = Math.Max(60, ch - TITLE_H - HEADER_H - FOOTER_H);
+            _scrollPanel.SetBounds(0, TITLE_H + HEADER_H, cw, scrollH);
 
             int usableW = _scrollPanel.ClientSize.Width - 28;
             if (usableW > 100)

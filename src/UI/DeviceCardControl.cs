@@ -40,8 +40,8 @@ namespace OmniBattery.UI
                      ControlStyles.UserPaint |
                      ControlStyles.ResizeRedraw, true);
 
-            Size = new Size(396, 154);
-            Margin = new Padding(10);
+            Size = new Size(300, 146);
+            Margin = new Padding(6);
             Cursor = Cursors.Default;
 
             // Forward mouse wheel to parent so the scroll panel catches it
@@ -202,72 +202,70 @@ namespace OmniBattery.UI
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle rect = new Rectangle(1, 1, Width - 3, Height - 3);
+            Rectangle cardRect = new Rectangle(5, 5, Width - 10, Height - 10);
             Color effectiveColor = _device != null ? _device.GetEffectiveColor() : Color.FromArgb(88, 101, 242);
             bool isConn = _device != null && _device.IsConnected;
 
-            // 1. Halo / Brilho suave exterior ao passar o mouse
-            if (_isHovered && isConn)
+            // 1. Halo / Brilho Neon Atmosférico Radiante (mesmo estilo da imagem de referência)
+            if (isConn)
             {
-                Rectangle glowRect = new Rectangle(rect.X - 1, rect.Y - 1, rect.Width + 2, rect.Height + 2);
-                using (GraphicsPath gp = RoundedRect(glowRect, 15))
-                using (Pen glowPen = new Pen(Color.FromArgb(38, effectiveColor), 2f))
-                    g.DrawPath(glowPen, gp);
+                int red = effectiveColor.R;
+                int green = effectiveColor.G;
+                int blue = effectiveColor.B;
+                int baseAlpha = _isHovered ? 12 : 7;
+
+                for (int i = 5; i >= 1; i--)
+                {
+                    Rectangle glowR = new Rectangle(cardRect.X - i, cardRect.Y - i, cardRect.Width + (i * 2), cardRect.Height + (i * 2));
+                    using (GraphicsPath gp = RoundedRect(glowR, 16 + i))
+                    using (Pen gpPen = new Pen(Color.FromArgb(baseAlpha * (6 - i), red, green, blue), 2f))
+                    {
+                        g.DrawPath(gpPen, gp);
+                    }
+                }
             }
 
-            // 2. Fundo e Vidro Translúcido Moderno (Deep Obsidian AeroGlass)
-            using (GraphicsPath path = RoundedRect(rect, 14))
+            // 2. Fundo Translúcido Vítreo e Borda Neon com Brilho
+            using (GraphicsPath path = RoundedRect(cardRect, 16))
             {
-                Color bgTop = !isConn
-                    ? Color.FromArgb(20, 22, 32)
-                    : (_isHovered ? Color.FromArgb(32, 36, 54) : Color.FromArgb(24, 27, 42));
-                Color bgBot = !isConn
-                    ? Color.FromArgb(14, 15, 22)
-                    : (_isHovered ? Color.FromArgb(22, 25, 38) : Color.FromArgb(17, 19, 30));
+                Color bgTop = !isConn ? Color.FromArgb(20, 22, 32) : Color.FromArgb(220, 22, 26, 40);
+                Color bgBot = !isConn ? Color.FromArgb(14, 15, 22) : Color.FromArgb(240, 14, 16, 26);
 
-                using (LinearGradientBrush b = new LinearGradientBrush(rect, bgTop, bgBot, 90f))
+                using (LinearGradientBrush b = new LinearGradientBrush(cardRect, bgTop, bgBot, 90f))
                     g.FillPath(b, path);
 
-                // Destaque de cristal no topo interno
-                Rectangle shineRect = new Rectangle(rect.X + 2, rect.Y + 1, rect.Width - 4, 38);
-                using (GraphicsPath sp = RoundedRect(shineRect, 12))
-                using (LinearGradientBrush s = new LinearGradientBrush(shineRect, Color.FromArgb(_isHovered ? 38 : 20, 255, 255, 255), Color.FromArgb(2, 255, 255, 255), 90f))
-                {
-                    g.FillPath(s, sp);
-                }
-
                 Color borderColor = !isConn
-                    ? (_isHovered ? Color.FromArgb(65, 70, 95) : Color.FromArgb(38, 42, 60))
-                    : (_isHovered ? Color.FromArgb(220, effectiveColor) : Color.FromArgb(48, 54, 82));
+                    ? (_isHovered ? Color.FromArgb(70, 75, 100) : Color.FromArgb(42, 46, 68))
+                    : Color.FromArgb(_isHovered ? 240 : 170, effectiveColor);
 
-                using (Pen p = new Pen(borderColor, _isHovered && isConn ? 1.5f : 1.1f))
+                using (Pen p = new Pen(borderColor, 1.2f))
                     g.DrawPath(p, path);
             }
 
             if (_device == null) return;
 
-            // ── 3. Ícone em Squircle Moderno (Superior Esquerdo) ────────────────
-            int iconSz = 46;
-            _iconCircleRect = new Rectangle(16, 16, iconSz, iconSz);
+            // ── 3. Ícone em Squircle Neon (Superior Esquerdo) ─────────────────
+            int iconSz = 42;
+            _iconCircleRect = new Rectangle(cardRect.X + 14, cardRect.Y + 14, iconSz, iconSz);
 
             Color circleColor = isConn ? effectiveColor : Color.FromArgb(100, 105, 130);
-            using (GraphicsPath ip = RoundedRect(_iconCircleRect, 12))
+            using (GraphicsPath ip = RoundedRect(_iconCircleRect, 10))
             {
-                using (SolidBrush ib = new SolidBrush(Color.FromArgb(isConn ? 38 : 20, circleColor)))
+                using (SolidBrush ib = new SolidBrush(Color.FromArgb(isConn ? 28 : 16, circleColor)))
                     g.FillPath(ib, ip);
-                using (Pen ipen = new Pen(Color.FromArgb(_isIconHovered ? 240 : (isConn ? 150 : 75), circleColor), 1.3f))
+                using (Pen ipen = new Pen(Color.FromArgb(_isIconHovered ? 240 : (isConn ? 160 : 60), circleColor), 1.2f))
                     g.DrawPath(ipen, ip);
             }
 
             IconRenderer.DrawDeviceIcon(g, _iconCircleRect,
                 _device.EffectiveCategory, circleColor, _device.CustomIconPath);
 
-            // ── 4. Botões Superiores Direitos: [● Ícone Ativo] e [✕] ───────────
-            int btnY = 16;
-            int btnH = 24;
-            int btnStatusW = 110;
-            _btnStatusRect = new Rectangle(Width - btnStatusW - 32, btnY, btnStatusW, btnH);
-            _btnHideRect   = new Rectangle(Width - 25, btnY, 18, btnH);
+            // ── 4. Botões Superiores Direitos: [● Ícone Ligado] e [✕] ───────────
+            int btnY = cardRect.Y + 13;
+            int btnH = 20;
+            int btnStatusW = 88;
+            _btnStatusRect = new Rectangle(cardRect.Right - btnStatusW - 22, btnY, btnStatusW, btnH);
+            _btnHideRect   = new Rectangle(cardRect.Right - 18, btnY, 16, btnH);
 
             bool trayOn = _device.IsTrayIconEnabled;
             string statusLabel = trayOn ? I18n.T("IconOn") : I18n.T("IconOff");
@@ -275,16 +273,16 @@ namespace OmniBattery.UI
             DrawStatusButton(g, _btnStatusRect, statusLabel, _isStatusHovered, statusColor, trayOn);
 
             // Botão Fechar / Ocultar [✕]
-            using (Font xf = new Font("Segoe UI", 10.5f, FontStyle.Bold))
+            using (Font xf = new Font("Segoe UI", 10f, FontStyle.Bold))
             {
-                Color xc = _isHideHovered ? Color.FromArgb(255, 95, 95) : Color.FromArgb(115, 120, 148);
-                g.DrawString("✕", xf, new SolidBrush(xc), _btnHideRect.X + 1, _btnHideRect.Y + 2);
+                Color xc = _isHideHovered ? Color.FromArgb(255, 95, 95) : Color.FromArgb(110, 115, 140);
+                g.DrawString("✕", xf, new SolidBrush(xc), _btnHideRect.X + 1, _btnHideRect.Y + 1);
             }
 
             // ── 5. Nome do Dispositivo ──────────────────────────────────────────
-            int txtLeft = 72;
-            Rectangle nameRect = new Rectangle(txtLeft, 14, Width - txtLeft - btnStatusW - 38, 24);
-            using (Font nf = new Font("Segoe UI", 12f, FontStyle.Bold))
+            int txtLeft = cardRect.X + 64;
+            Rectangle nameRect = new Rectangle(txtLeft, cardRect.Y + 12, cardRect.Width - 64 - btnStatusW - 28, 22);
+            using (Font nf = new Font("Segoe UI", 11.2f, FontStyle.Bold))
             {
                 StringFormat sf = new StringFormat
                 {
@@ -297,18 +295,19 @@ namespace OmniBattery.UI
             }
 
             // ── 6. Segunda Linha: Chip de Protocolo + Botões [Ícone] e [Cor] ───
-            string proto = _device.Protocol;
+            int row2Y = cardRect.Y + 38;
             int curX = txtLeft;
-            using (Font pf = new Font("Segoe UI", 7.5f, FontStyle.Bold))
+            string proto = _device.Protocol;
+            using (Font pf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
             {
                 SizeF ps = g.MeasureString(proto, pf);
-                int badgeW = Math.Min(145, (int)ps.Width + 12);
-                Rectangle badge = new Rectangle(curX, 42, badgeW, 20);
-                using (GraphicsPath bp = RoundedRect(badge, 6))
+                int badgeW = Math.Min(115, (int)ps.Width + 10);
+                Rectangle badge = new Rectangle(curX, row2Y, badgeW, 19);
+                using (GraphicsPath bp = RoundedRect(badge, 5))
                 {
-                    using (SolidBrush bb = new SolidBrush(isConn ? Color.FromArgb(34, 38, 58) : Color.FromArgb(25, 27, 40)))
+                    using (SolidBrush bb = new SolidBrush(Color.FromArgb(28, 32, 48)))
                         g.FillPath(bb, bp);
-                    using (Pen bpen = new Pen(Color.FromArgb(55, 62, 92), 1f))
+                    using (Pen bpen = new Pen(Color.FromArgb(50, 58, 86), 1f))
                         g.DrawPath(bpen, bp);
 
                     StringFormat bsf = new StringFormat
@@ -316,77 +315,91 @@ namespace OmniBattery.UI
                         Trimming = StringTrimming.EllipsisCharacter,
                         FormatFlags = StringFormatFlags.NoWrap
                     };
-                    Rectangle textR = new Rectangle(badge.X + 6, badge.Y + 3, badge.Width - 10, badge.Height - 4);
-                    g.DrawString(proto, pf, new SolidBrush(isConn ? Color.FromArgb(185, 195, 225) : Color.FromArgb(120, 125, 150)), textR, bsf);
+                    Rectangle textR = new Rectangle(badge.X + 5, badge.Y + 3, badge.Width - 8, badge.Height - 4);
+                    g.DrawString(proto, pf, new SolidBrush(Color.FromArgb(170, 180, 210)), textR, bsf);
                 }
-                curX += badgeW + 10;
+                curX += badgeW + 6;
             }
 
-            // Botões rápidos de Ícone e Cor com micro-cápsula moderna e espaçamento confortável
+            // Botões rápidos de Ícone e Cor com micro-cápsula moderna
             string iconBtnText = I18n.T("BtnIcon");
             string colorBtnText = I18n.T("BtnColor");
             using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
             {
-                int iconW = Math.Max(52, (int)g.MeasureString(iconBtnText, bf).Width + 16);
-                int colorW = Math.Max(54, (int)g.MeasureString(colorBtnText, bf).Width + 24);
-                _btnIconRect  = new Rectangle(curX, 42, iconW, 20);
-                _btnColorRect = new Rectangle(_btnIconRect.Right + 8, 42, colorW, 20);
+                _btnIconRect  = new Rectangle(curX, row2Y, 44, 19);
+                _btnColorRect = new Rectangle(_btnIconRect.Right + 6, row2Y, 46, 19);
             }
             DrawSmallButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  effectiveColor, false);
             DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
-            // ── 7. Porcentagem da Bateria & Barra de Energia / Aviso com Fio ────
+            // ── 7. Tubo de Laser / Barra Neon Brilhante & Porcentagem ──────────
             if (!_device.IsWired)
             {
-                string pct = _device.GetFormattedPercentage();
-                if (!string.IsNullOrEmpty(pct))
-                {
-                    using (Font pctF = new Font("Segoe UI", isConn ? 19f : 15f, FontStyle.Bold))
-                    {
-                        SizeF pctSz = g.MeasureString(pct, pctF);
-                        float pctX = Width - pctSz.Width - 16;
-                        float pctY = isConn ? 68f : 71f;
-                        g.DrawString(pct, pctF, new SolidBrush(effectiveColor), pctX, pctY);
-                    }
-                }
+                int barX = cardRect.X + 14;
+                int barY = cardRect.Y + 84;
+                int barW = cardRect.Width - 14 - 84;
+                int barH = 11;
 
-                // Tubo / Barra de Bateria AeroGlass de Alta Resolução
-                int barX = 16, barY = 88;
-                int barW = Width - 124, barH = 11;
-                Rectangle barBg = new Rectangle(barX, barY, barW, barH);
-
-                using (GraphicsPath bgP = RoundedRect(barBg, 5))
-                using (SolidBrush bgB = new SolidBrush(Color.FromArgb(14, 16, 25)))
+                // Canaleta escura de fundo
+                Rectangle barTrack = new Rectangle(barX, barY, barW, barH);
+                using (GraphicsPath btp = RoundedRect(barTrack, 5))
                 {
-                    g.FillPath(bgB, bgP);
-                    using (Pen tpen = new Pen(Color.FromArgb(38, 42, 64), 1f))
-                        g.DrawPath(tpen, bgP);
+                    using (SolidBrush btb = new SolidBrush(Color.FromArgb(14, 16, 26))) g.FillPath(btb, btp);
+                    using (Pen btpen = new Pen(Color.FromArgb(34, 40, 60), 1f)) g.DrawPath(btpen, btp);
                 }
 
                 if (isConn && _device.BatteryPercent > 0)
                 {
-                    int fill = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
-                    Rectangle barFill = new Rectangle(barX, barY, fill, barH);
+                    int fillW = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
+                    Rectangle barFill = new Rectangle(barX, barY, fillW, barH);
+
+                    // Halo neon difuso brilhante ao redor do tubo preenchido
+                    int red = effectiveColor.R;
+                    int green = effectiveColor.G;
+                    int blue = effectiveColor.B;
+                    for (int i = 4; i >= 1; i--)
+                    {
+                        Rectangle tg = new Rectangle(barX - i, barY - i, fillW + (i * 2), barH + (i * 2));
+                        using (GraphicsPath tgp = RoundedRect(tg, (barH + (i * 2)) / 2))
+                        using (SolidBrush tgb = new SolidBrush(Color.FromArgb(22 * (5 - i), red, green, blue)))
+                        {
+                            g.FillPath(tgb, tgp);
+                        }
+                    }
+
+                    // Núcleo do tubo neon radiante
                     using (GraphicsPath fp = RoundedRect(barFill, 5))
                     {
-                        Color c1 = effectiveColor;
-                        Color c2 = Color.FromArgb(Math.Max(0, effectiveColor.R - 35), Math.Max(0, effectiveColor.G - 35), Math.Max(0, effectiveColor.B - 20));
-                        using (LinearGradientBrush fb = new LinearGradientBrush(barFill, c1, c2, 0f))
+                        using (SolidBrush fb = new SolidBrush(effectiveColor))
                             g.FillPath(fb, fp);
 
-                        // Linha de reflexo especular de cristal no topo da barra
-                        Rectangle barShine = new Rectangle(barX, barY, fill, 4);
-                        using (LinearGradientBrush sb = new LinearGradientBrush(barShine, Color.FromArgb(130, 255, 255, 255), Color.FromArgb(10, 255, 255, 255), 90f))
+                        // Linha de reflexo especular de laser no topo do tubo
+                        Rectangle coreRect = new Rectangle(barX + 2, barY + 2, fillW - 4, 3);
+                        if (coreRect.Width > 4)
                         {
-                            g.FillRectangle(sb, barShine);
+                            using (GraphicsPath coreP = RoundedRect(coreRect, 1))
+                            using (SolidBrush coreB = new SolidBrush(Color.FromArgb(225, 255, 255, 255)))
+                            {
+                                g.FillPath(coreB, coreP);
+                            }
                         }
+                    }
+                }
+
+                // Porcentagem da bateria em 20pt Bold na cor do dispositivo
+                string pct = _device.GetFormattedPercentage();
+                if (!string.IsNullOrEmpty(pct))
+                {
+                    using (Font pctFont = new Font("Segoe UI", 20f, FontStyle.Bold))
+                    {
+                        g.DrawString(pct, pctFont, new SolidBrush(isConn ? effectiveColor : Color.FromArgb(120, 125, 145)), cardRect.Right - 76, cardRect.Y + 68);
                     }
                 }
             }
             else
             {
                 // Dispositivo com fio: Linha de aviso moderna em ciano elétrico
-                int barX = 16, barY = 86;
+                int barX = cardRect.X + 14, barY = cardRect.Y + 84;
                 using (Font wf = new Font("Segoe UI", 8.8f, FontStyle.Bold))
                 {
                     g.DrawString("⚡ " + I18n.T("WiredDeviceNotice"), wf, new SolidBrush(Color.FromArgb(100, 195, 255)), barX, barY);
@@ -415,10 +428,10 @@ namespace OmniBattery.UI
                     : string.Format("{0}  •  {1}", sub, updatedText);
             }
 
-            using (Font inf = new Font("Segoe UI", 7.8f))
+            using (Font inf = new Font("Segoe UI", 7.6f))
             {
-                Color infoColor = isConn ? Color.FromArgb(135, 142, 172) : Color.FromArgb(100, 105, 130);
-                g.DrawString(info, inf, new SolidBrush(infoColor), 16, 118);
+                Color infoColor = isConn ? Color.FromArgb(125, 132, 155) : Color.FromArgb(90, 95, 115);
+                g.DrawString(info, inf, new SolidBrush(infoColor), cardRect.X + 14, cardRect.Y + 112);
             }
         }
 
