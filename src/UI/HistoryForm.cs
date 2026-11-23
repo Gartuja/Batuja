@@ -15,14 +15,14 @@ namespace OmniBattery.UI
         private Panel _footerPanel;
         private Panel _itemsPanel;
         private Label _lblSummary;
-        private Button _btnClear;
-        private Button _btnClose;
+        private AeroGlassButton _btnClear;
+        private AeroGlassButton _btnClose;
 
         public HistoryForm(BatteryManager manager)
         {
             _manager = manager;
 
-            Text = "Batuja - Histórico de Dispositivos";
+            Text = I18n.T("HistoryTitle");
             Size = new Size(640, 520);
             MinimumSize = new Size(540, 400);
             StartPosition = FormStartPosition.CenterParent;
@@ -82,7 +82,7 @@ namespace OmniBattery.UI
 
             Label lblTitle = new Label
             {
-                Text = "Histórico de Dispositivos sem Fio",
+                Text = I18n.T("HistoryTitle"),
                 Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
@@ -92,7 +92,7 @@ namespace OmniBattery.UI
 
             Label lblSubtitle = new Label
             {
-                Text = "Todos os dispositivos sem fio já conectados durante o uso do Batuja",
+                Text = I18n.T("HistorySubtitle"),
                 Font = new Font("Segoe UI", 8.25f),
                 ForeColor = Color.FromArgb(140, 145, 175),
                 AutoSize = true,
@@ -100,22 +100,22 @@ namespace OmniBattery.UI
             };
             _headerPanel.Controls.Add(lblSubtitle);
 
-            _btnClear = new Button
+            _btnClear = new AeroGlassButton
             {
-                Text = "Limpar Histórico",
-                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Text = I18n.T("ClearHistory"),
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(255, 120, 120),
-                BackColor = Color.FromArgb(50, 35, 42),
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(116, 30),
+                BaseGlassColor = Color.FromArgb(60, 35, 45),
+                AccentColor = Color.FromArgb(255, 90, 90),
+                UseAccentBorder = true,
+                Size = new Size(124, 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(500, 18),
+                Location = new Point(492, 18),
                 Cursor = Cursors.Hand
             };
-            _btnClear.FlatAppearance.BorderColor = Color.FromArgb(120, 60, 70);
             _btnClear.Click += delegate
             {
-                if (MessageBox.Show(this, "Deseja realmente limpar todo o histórico de dispositivos?", "Limpar Histórico",
+                if (MessageBox.Show(this, "Deseja realmente limpar todo o histórico de dispositivos?", I18n.T("ClearHistory"),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     _manager.History.Clear();
@@ -141,19 +141,17 @@ namespace OmniBattery.UI
             };
             _footerPanel.Controls.Add(_lblSummary);
 
-            _btnClose = new Button
+            _btnClose = new AeroGlassButton
             {
-                Text = "Fechar",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Text = I18n.T("Close"),
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(45, 49, 72),
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(84, 30),
+                BaseGlassColor = Color.FromArgb(42, 48, 70),
+                Size = new Size(88, 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(530, 10),
+                Location = new Point(526, 10),
                 Cursor = Cursors.Hand
             };
-            _btnClose.FlatAppearance.BorderColor = Color.FromArgb(70, 75, 105);
             _btnClose.Click += delegate { Close(); };
             _footerPanel.Controls.Add(_btnClose);
 
@@ -275,7 +273,9 @@ namespace OmniBattery.UI
             p.Controls.Add(lblName);
 
             // Protocol & Battery
-            string sub = string.Format("{0}  •  Última carga: {1}%", item.Protocol, item.LastBatteryPercent >= 0 ? item.LastBatteryPercent.ToString() : "N/D");
+            string sub = item.LastBatteryPercent >= 0
+                ? string.Format("{0}  •  {1}", item.Protocol, I18n.T("LastCharge", item.LastBatteryPercent))
+                : item.Protocol;
             Label lblSub = new Label
             {
                 Text = sub,
@@ -289,7 +289,7 @@ namespace OmniBattery.UI
             // Last Seen timestamp
             Label lblTime = new Label
             {
-                Text = string.Format("Visto: {0:dd/MM HH:mm:ss}", item.LastSeen),
+                Text = I18n.T("LastSeen", string.Format("{0:dd/MM HH:mm:ss}", item.LastSeen)),
                 Font = new Font("Segoe UI", 7.5f),
                 ForeColor = Color.FromArgb(100, 105, 130),
                 AutoSize = true,
@@ -302,12 +302,12 @@ namespace OmniBattery.UI
             {
                 Label lblStatus = new Label
                 {
-                    Text = "● Conectado",
+                    Text = "● " + I18n.T("ConnectedStatus"),
                     Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                     ForeColor = Color.FromArgb(46, 204, 113),
                     AutoSize = true,
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                    Location = new Point(p.Width - 110, 27)
+                    Location = new Point(p.Width - 120, 27)
                 };
                 p.Controls.Add(lblStatus);
             }
@@ -315,12 +315,12 @@ namespace OmniBattery.UI
             {
                 Label lblStatus = new Label
                 {
-                    Text = "○ Desligado",
+                    Text = "○ " + I18n.T("DisconnectedStatus"),
                     Font = new Font("Segoe UI", 8.5f),
                     ForeColor = Color.FromArgb(130, 135, 160),
                     AutoSize = true,
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                    Location = new Point(p.Width - 110, 27)
+                    Location = new Point(p.Width - 120, 27)
                 };
                 p.Controls.Add(lblStatus);
             }

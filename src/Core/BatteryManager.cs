@@ -343,6 +343,14 @@ namespace OmniBattery.Core
                             {
                                 if (dev == null) continue;
 
+                                // Filtro estrito do usuario: apenas fones de ouvido, mouse e teclado
+                                if (dev.Category != DeviceCategory.Mouse &&
+                                    dev.Category != DeviceCategory.Teclado &&
+                                    dev.Category != DeviceCategory.FoneDeOuvido)
+                                {
+                                    continue;
+                                }
+
                                 // Check if user hid or turned off this device
                                 if (_settings.IsDeviceHidden(dev.DeviceKey) || _settings.IsDeviceHidden(dev.Name) ||
                                     _settings.IsDeviceManualDisconnected(dev.DeviceKey) || _settings.IsDeviceManualDisconnected(dev.Name))

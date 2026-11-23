@@ -42,26 +42,27 @@ namespace OmniBattery.UI
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Renderer = new DarkToolStripRenderer();
 
-            ToolStripMenuItem itemOpen = new ToolStripMenuItem("Abrir Painel");
+            ToolStripMenuItem itemOpen = new ToolStripMenuItem(I18n.T("OpenDashboard"));
             itemOpen.Font = new Font(itemOpen.Font, FontStyle.Bold);
             itemOpen.Click += delegate { ShowMainWindow(); };
             menu.Items.Add(itemOpen);
 
-            ToolStripMenuItem itemOverlay = new ToolStripMenuItem("Sobreposição na Tela (HUD)");
+            ToolStripMenuItem itemOverlay = new ToolStripMenuItem(I18n.T("ScreenOverlay"));
             itemOverlay.Click += delegate { if (RequestToggleOverlay != null) RequestToggleOverlay(); };
             menu.Items.Add(itemOverlay);
 
-            ToolStripMenuItem itemRefresh = new ToolStripMenuItem("Atualizar Agora");
+            ToolStripMenuItem itemRefresh = new ToolStripMenuItem(I18n.T("RefreshNow"));
             itemRefresh.Click += delegate { _manager.TriggerScanAsync(); };
             menu.Items.Add(itemRefresh);
 
             menu.Items.Add(new ToolStripSeparator());
 
             menu.Items.Add(BuildStyleMenu());
+            menu.Items.Add(BuildLanguageMenu());
 
             menu.Items.Add(new ToolStripSeparator());
 
-            ToolStripMenuItem itemExit = new ToolStripMenuItem("Sair");
+            ToolStripMenuItem itemExit = new ToolStripMenuItem(I18n.T("ExitApp"));
             itemExit.Click += delegate
             {
                 Dispose();
@@ -162,13 +163,13 @@ namespace OmniBattery.UI
             headerItem.Enabled = false;
             menu.Items.Add(headerItem);
 
-            ToolStripMenuItem itemOpen = new ToolStripMenuItem("Abrir Painel");
+            ToolStripMenuItem itemOpen = new ToolStripMenuItem(I18n.T("OpenDashboard"));
             itemOpen.Click += delegate { ShowMainWindow(); };
             menu.Items.Add(itemOpen);
 
             menu.Items.Add(new ToolStripSeparator());
 
-            ToolStripMenuItem itemColor = new ToolStripMenuItem("🎨 Mudar Cor Desta Bateria...");
+            ToolStripMenuItem itemColor = new ToolStripMenuItem(I18n.T("ChangeBatteryColor"));
             itemColor.Click += delegate
             {
                 if (RequestColorChange != null)
@@ -184,7 +185,7 @@ namespace OmniBattery.UI
 
             if (dev.CustomColor.HasValue)
             {
-                ToolStripMenuItem itemResetColor = new ToolStripMenuItem("Restaurar Cor Automática");
+                ToolStripMenuItem itemResetColor = new ToolStripMenuItem(I18n.T("RestoreAutoColor"));
                 itemResetColor.Click += delegate
                 {
                     _manager.ResetCustomDeviceColor(dev);
@@ -193,33 +194,34 @@ namespace OmniBattery.UI
             }
 
             // Submenu to change icon from tray
-            ToolStripMenuItem itemIcon = new ToolStripMenuItem("🏷️ Mudar Ícone Deste Dispositivo");
-            itemIcon.DropDownItems.Add("🖱️ Mouse", null, delegate { _manager.SetDeviceIcon(dev, "Mouse"); });
-            itemIcon.DropDownItems.Add("⌨️ Teclado", null, delegate { _manager.SetDeviceIcon(dev, "Teclado"); });
-            itemIcon.DropDownItems.Add("🎧 Fone de Ouvido", null, delegate { _manager.SetDeviceIcon(dev, "Fone"); });
-            itemIcon.DropDownItems.Add("🎮 Controle / Gamepad", null, delegate { _manager.SetDeviceIcon(dev, "Controle"); });
-            itemIcon.DropDownItems.Add("💻 Laptop / Notebook", null, delegate { _manager.SetDeviceIcon(dev, "Laptop"); });
-            itemIcon.DropDownItems.Add("🔋 Bateria / Genérico", null, delegate { _manager.SetDeviceIcon(dev, "Bateria"); });
+            ToolStripMenuItem itemIcon = new ToolStripMenuItem(I18n.T("ChangeDeviceIcon"));
+            itemIcon.DropDownItems.Add(I18n.T("CatMouse"), null, delegate { _manager.SetDeviceIcon(dev, "Mouse"); });
+            itemIcon.DropDownItems.Add(I18n.T("CatKeyboard"), null, delegate { _manager.SetDeviceIcon(dev, "Teclado"); });
+            itemIcon.DropDownItems.Add(I18n.T("CatHeadphones"), null, delegate { _manager.SetDeviceIcon(dev, "Fone"); });
+            itemIcon.DropDownItems.Add(I18n.T("CatGamepad"), null, delegate { _manager.SetDeviceIcon(dev, "Controle"); });
+            itemIcon.DropDownItems.Add(I18n.T("CatLaptop"), null, delegate { _manager.SetDeviceIcon(dev, "Laptop"); });
+            itemIcon.DropDownItems.Add(I18n.T("CatGeneric"), null, delegate { _manager.SetDeviceIcon(dev, "Bateria"); });
             itemIcon.DropDownItems.Add(new ToolStripSeparator());
-            itemIcon.DropDownItems.Add("🔄 Restaurar Ícone Padrão", null, delegate { _manager.ResetDeviceIcon(dev); });
+            itemIcon.DropDownItems.Add(I18n.T("RestoreAutoIcon"), null, delegate { _manager.ResetDeviceIcon(dev); });
             menu.Items.Add(itemIcon);
 
             menu.Items.Add(new ToolStripSeparator());
 
             // Tray icon style submenu
             menu.Items.Add(BuildStyleMenu());
+            menu.Items.Add(BuildLanguageMenu());
 
-            ToolStripMenuItem itemOverlay = new ToolStripMenuItem("Sobreposição na Tela (HUD)");
+            ToolStripMenuItem itemOverlay = new ToolStripMenuItem(I18n.T("ScreenOverlay"));
             itemOverlay.Click += delegate { if (RequestToggleOverlay != null) RequestToggleOverlay(); };
             menu.Items.Add(itemOverlay);
 
             menu.Items.Add(new ToolStripSeparator());
 
-            ToolStripMenuItem itemRefresh = new ToolStripMenuItem("Atualizar Agora");
+            ToolStripMenuItem itemRefresh = new ToolStripMenuItem(I18n.T("RefreshNow"));
             itemRefresh.Click += delegate { _manager.TriggerScanAsync(); };
             menu.Items.Add(itemRefresh);
 
-            ToolStripMenuItem itemExit = new ToolStripMenuItem("Sair do Batuja");
+            ToolStripMenuItem itemExit = new ToolStripMenuItem(I18n.T("ExitApp"));
             itemExit.Click += delegate
             {
                 Dispose();
@@ -234,16 +236,16 @@ namespace OmniBattery.UI
         {
             switch (style)
             {
-                case TrayIconStyle.AeroGlass:   return "Aeroglass (vidro translúcido)";
-                case TrayIconStyle.Retro:       return "Retro (pixel clássico)";
-                case TrayIconStyle.Minimalista: return "Minimalista (só o número)";
-                default:                        return "Moderno (padrão)";
+                case TrayIconStyle.AeroGlass:   return I18n.T("StyleAeroGlass");
+                case TrayIconStyle.Retro:       return I18n.T("StyleRetro");
+                case TrayIconStyle.Minimalista: return I18n.T("StyleMinimal");
+                default:                        return I18n.T("StyleModern");
             }
         }
 
         private ToolStripMenuItem BuildStyleMenu()
         {
-            ToolStripMenuItem itemStyle = new ToolStripMenuItem("Estilo dos Ícones da Bandeja");
+            ToolStripMenuItem itemStyle = new ToolStripMenuItem(I18n.T("TrayIconStyle"));
             foreach (TrayIconStyle styleOption in Enum.GetValues(typeof(TrayIconStyle)))
             {
                 TrayIconStyle captured = styleOption;
@@ -253,6 +255,30 @@ namespace OmniBattery.UI
                 itemStyle.DropDownItems.Add(si);
             }
             return itemStyle;
+        }
+
+        private ToolStripMenuItem BuildLanguageMenu()
+        {
+            ToolStripMenuItem itemLang = new ToolStripMenuItem(I18n.T("BtnLanguage"));
+
+            Action<string, AppLanguage> addLang = (name, lang) =>
+            {
+                ToolStripMenuItem si = new ToolStripMenuItem(name);
+                si.Checked = (I18n.CurrentLanguage == lang);
+                si.Click += delegate
+                {
+                    _manager.Settings.Language = lang;
+                    _manager.Settings.Save();
+                    I18n.SetLanguage(lang);
+                };
+                itemLang.DropDownItems.Add(si);
+            };
+
+            addLang("Português (PT)", AppLanguage.PT);
+            addLang("English (EN)", AppLanguage.EN);
+            addLang("Español (ES)", AppLanguage.ES);
+
+            return itemLang;
         }
 
         /// <summary>Saves the style and immediately re-renders every tray icon.</summary>

@@ -26,16 +26,22 @@ namespace OmniBattery.UI
         private Panel _emptyPanel;
         private Label _lblDeviceCount;
         private Label _lblStatus;
-        private Button _btnRefresh;
-        private Button _btnSettings;
-        private Button _btnHistory;
-        private Button _btnOverlay;
-        private Button _btnBackground;
-        private Button _btnAdmin;
+        private Label _lblEmptyMsg;
+        private Label _lblEmptyDesc;
+        private CheckBox _chkMinimize;
+
+        private AeroGlassButton _btnRefresh;
+        private AeroGlassButton _btnSettings;
+        private AeroGlassButton _btnHistory;
+        private AeroGlassButton _btnOverlay;
+        private AeroGlassButton _btnBackground;
+        private AeroGlassButton _btnAdmin;
+        private AeroGlassButton _btnLanguage;
 
         private Image _bgImage = null;
         private bool _isGifAnimated = false;
         private int _bgOpacity = 75;
+        private bool _isScanning = false;
 
         private readonly Dictionary<string, DeviceCardControl> _cardControls =
             new Dictionary<string, DeviceCardControl>();
@@ -44,6 +50,7 @@ namespace OmniBattery.UI
         {
             _manager = manager;
             _bgOpacity = _manager.Settings.BackgroundOpacity;
+            I18n.CurrentLanguage = _manager.Settings.Language;
 
             InitializeFormStyle();
             BuildUI();
@@ -59,6 +66,8 @@ namespace OmniBattery.UI
             _trayManager.RequestColorChange += OnRequestColorChange;
             _trayManager.RequestToggleOverlay = delegate { _overlayForm.ToggleVisibility(); };
 
+            I18n.LanguageChanged += ApplyLanguage;
+
             if (_manager.Settings.OverlayEnabled)
             {
                 _overlayForm.ShowOverlay();
@@ -70,14 +79,18 @@ namespace OmniBattery.UI
             if (_btnOverlay == null) return;
             if (isVisible)
             {
-                _btnOverlay.Text = "● Sobrepor";
-                _btnOverlay.BackColor = Color.FromArgb(46, 204, 113);
-                _btnOverlay.ForeColor = Color.Black;
+                _btnOverlay.Text = I18n.T("BtnOverlayActive");
+                _btnOverlay.BaseGlassColor = Color.FromArgb(46, 180, 100);
+                _btnOverlay.AccentColor = Color.FromArgb(46, 220, 113);
+                _btnOverlay.UseAccentBorder = true;
+                _btnOverlay.ForeColor = Color.White;
             }
             else
             {
-                _btnOverlay.Text = "Sobrepor";
-                _btnOverlay.BackColor = Color.FromArgb(45, 49, 72);
+                _btnOverlay.Text = I18n.T("BtnOverlay");
+                _btnOverlay.BaseGlassColor = Color.FromArgb(42, 48, 70);
+                _btnOverlay.AccentColor = Color.FromArgb(88, 101, 242);
+                _btnOverlay.UseAccentBorder = false;
                 _btnOverlay.ForeColor = Color.White;
             }
         }
@@ -85,10 +98,10 @@ namespace OmniBattery.UI
         // ─────────────────────────── Form style ───────────────────────────────
         private void InitializeFormStyle()
         {
-            Text = "Batuja - Monitor de Dispositivos sem Fio";
-            Size = new Size(880, 640);
-            MinimumSize = new Size(650, 480);
-            BackColor = Color.FromArgb(20, 22, 32);
+            Text = I18n.T("AppTitle");
+            Size = new Size(930, 640);
+            MinimumSize = new Size(720, 480);
+            BackColor = Color.FromArgb(18, 20, 30);
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9f, FontStyle.Regular);
             StartPosition = FormStartPosition.CenterScreen;
@@ -102,17 +115,35 @@ namespace OmniBattery.UI
         {
             SuspendLayout();
 
-            // ── Header ──────────────────────────────────────────────────────
+            // ── Header Panel com estética AeroGlass ──────────────────────────
             _headerPanel = new Panel
             {
-                BackColor = Color.FromArgb(28, 31, 46),
+                BackColor = Color.FromArgb(26, 29, 44),
                 Padding = new Padding(0)
+            };
+            _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                Rectangle r = _headerPanel.ClientRectangle;
+                if (r.Width <= 0 || r.Height <= 0) return;
+
+                // Fundo gradiente AeroGlass
+                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(34, 38, 58), Color.FromArgb(22, 25, 38), 90f))
+                    g.FillRectangle(lgb, r);
+
+                // Brilho de vidro no topo
+                using (Pen tp = new Pen(Color.FromArgb(45, 255, 255, 255), 1f))
+                    g.DrawLine(tp, 0, 0, r.Width, 0);
+
+                // Linha de divisão inferior sutil
+                using (Pen bp = new Pen(Color.FromArgb(48, 54, 80), 1f))
+                    g.DrawLine(bp, 0, r.Height - 1, r.Width, r.Height - 1);
             };
 
             PictureBox pbLogo = new PictureBox
             {
                 Size = new Size(28, 28),
-                Location = new Point(14, 16),
+                Location = new Point(14, 18),
                 BackColor = Color.Transparent,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
@@ -124,96 +155,121 @@ namespace OmniBattery.UI
                 Text = "Batuja",
                 Font = new Font("Segoe UI", 15f, FontStyle.Bold),
                 ForeColor = Color.White,
+                BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(46, 16)
+                Location = new Point(46, 17)
             };
             _headerPanel.Controls.Add(lblTitle);
 
             _lblDeviceCount = new Label
             {
-                Text = "Varrendo...",
+                Text = I18n.T("BtnScanning"),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(88, 101, 242),
+                ForeColor = Color.FromArgb(100, 140, 255),
+                BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(lblTitle.Left + lblTitle.PreferredWidth + 10, 23)
+                Location = new Point(lblTitle.Left + lblTitle.PreferredWidth + 10, 24)
             };
             _headerPanel.Controls.Add(_lblDeviceCount);
 
             bool isAdmin = IsRunningAsAdmin();
             if (!isAdmin)
             {
-                _btnAdmin = CreateStyledButton("Admin", Color.FromArgb(60, 40, 45));
+                _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(80, 35, 45));
                 _btnAdmin.Size = new Size(68, 32);
-                _btnAdmin.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+                _btnAdmin.Font = new Font("Segoe UI", 8.5f, FontStyle.Bold);
                 _btnAdmin.ForeColor = Color.FromArgb(255, 120, 120);
+                _btnAdmin.AccentColor = Color.FromArgb(255, 90, 90);
+                _btnAdmin.UseAccentBorder = true;
                 _btnAdmin.Click += OnRestartAsAdmin;
                 _headerPanel.Controls.Add(_btnAdmin);
             }
 
-            _btnBackground = CreateStyledButton("Fundo", Color.FromArgb(45, 49, 72));
+            _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(42, 48, 70));
             _btnBackground.Size = new Size(72, 32);
             _btnBackground.Click += OnBackgroundButtonClick;
             _headerPanel.Controls.Add(_btnBackground);
 
-            _btnOverlay = CreateStyledButton(_manager.Settings.OverlayEnabled ? "● Sobrepor" : "Sobrepor",
-                _manager.Settings.OverlayEnabled ? Color.FromArgb(46, 204, 113) : Color.FromArgb(45, 49, 72));
-            if (_manager.Settings.OverlayEnabled) _btnOverlay.ForeColor = Color.Black;
+            bool overlayActive = _manager.Settings.OverlayEnabled;
+            _btnOverlay = CreateStyledButton(overlayActive ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay"),
+                overlayActive ? Color.FromArgb(46, 180, 100) : Color.FromArgb(42, 48, 70));
             _btnOverlay.Size = new Size(88, 32);
+            _btnOverlay.AccentColor = overlayActive ? Color.FromArgb(46, 220, 113) : Color.FromArgb(88, 101, 242);
+            _btnOverlay.UseAccentBorder = overlayActive;
             _btnOverlay.Click += delegate { _overlayForm.ToggleVisibility(); };
             _headerPanel.Controls.Add(_btnOverlay);
 
-            _btnHistory = CreateStyledButton("Histórico", Color.FromArgb(45, 49, 72));
-            _btnHistory.Size = new Size(88, 32);
+            _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(42, 48, 70));
+            _btnHistory.Size = new Size(86, 32);
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
-            _btnRefresh = CreateStyledButton("Atualizar", Color.FromArgb(88, 101, 242));
-            _btnRefresh.Size = new Size(90, 32);
+            _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(88, 101, 242));
+            _btnRefresh.Size = new Size(92, 32);
+            _btnRefresh.AccentColor = Color.FromArgb(120, 135, 255);
+            _btnRefresh.UseAccentBorder = true;
             _btnRefresh.Click += delegate { _manager.TriggerScanAsync(); };
             _headerPanel.Controls.Add(_btnRefresh);
 
-            _btnSettings = CreateStyledButton("Configs", Color.FromArgb(45, 49, 72));
-            _btnSettings.Size = new Size(80, 32);
+            _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(42, 48, 70));
+            _btnSettings.Size = new Size(78, 32);
             _btnSettings.Click += OnSettingsClick;
             _headerPanel.Controls.Add(_btnSettings);
 
+            // Botão de seleção de Idioma (PT, EN, ES)
+            _btnLanguage = CreateStyledButton(GetLanguageButtonText(), Color.FromArgb(42, 48, 70));
+            _btnLanguage.Size = new Size(68, 32);
+            _btnLanguage.Click += OnLanguageButtonClick;
+            _headerPanel.Controls.Add(_btnLanguage);
+
             Controls.Add(_headerPanel);
 
-            // ── Footer ──────────────────────────────────────────────────────
+            // ── Footer Panel com estética AeroGlass ──────────────────────────
             _footerPanel = new Panel
             {
-                BackColor = Color.FromArgb(28, 31, 46)
+                BackColor = Color.FromArgb(24, 27, 40)
+            };
+            _footerPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                Rectangle r = _footerPanel.ClientRectangle;
+                if (r.Width <= 0 || r.Height <= 0) return;
+
+                using (Pen tp = new Pen(Color.FromArgb(40, 255, 255, 255), 1f))
+                    g.DrawLine(tp, 0, 0, r.Width, 0);
             };
 
             _lblStatus = new Label
             {
-                Text = "Pronto",
-                ForeColor = Color.FromArgb(130, 135, 160),
+                Text = I18n.T("Ready"),
+                ForeColor = Color.FromArgb(135, 140, 165),
+                BackColor = Color.Transparent,
                 AutoSize = true,
                 Location = new Point(16, 10)
             };
             _footerPanel.Controls.Add(_lblStatus);
 
-            CheckBox chkMinimize = new CheckBox
+            _chkMinimize = new CheckBox
             {
-                Text = "Minimizar para a bandeja ao fechar",
+                Text = I18n.T("MinToTrayOnClose"),
                 Checked = _manager.Settings.MinimizeToTrayOnClose,
                 ForeColor = Color.FromArgb(160, 165, 190),
+                BackColor = Color.Transparent,
                 AutoSize = true,
                 Location = new Point(16, 10)
             };
-            chkMinimize.CheckedChanged += delegate
+            _chkMinimize.CheckedChanged += delegate
             {
-                _manager.Settings.MinimizeToTrayOnClose = chkMinimize.Checked;
+                _manager.Settings.MinimizeToTrayOnClose = _chkMinimize.Checked;
                 _manager.Settings.Save();
             };
-            _footerPanel.Controls.Add(chkMinimize);
+            _footerPanel.Controls.Add(_chkMinimize);
 
             Controls.Add(_footerPanel);
 
             // ── Scroll outer panel (background + scrollbar) ──────────────────
             _scrollPanel = new BgScrollPanel();
-            _scrollPanel.BackColor = Color.FromArgb(20, 22, 32);
+            _scrollPanel.BackColor = Color.FromArgb(18, 20, 30);
             _scrollPanel.AutoScroll = true;
             _scrollPanel.MouseWheel += OnScrollPanelMouseWheel;
             Controls.Add(_scrollPanel);
@@ -239,7 +295,6 @@ namespace OmniBattery.UI
 
         private void OnScrollPanelMouseWheel(object sender, MouseEventArgs e)
         {
-            // Forward wheel event to the scroll panel (needed when inner controls eat it)
             int delta = SystemInformation.MouseWheelScrollLines * 20;
             int newVal = _scrollPanel.VerticalScroll.Value - (e.Delta > 0 ? delta : -delta);
             newVal = Math.Max(_scrollPanel.VerticalScroll.Minimum,
@@ -248,21 +303,27 @@ namespace OmniBattery.UI
             _scrollPanel.PerformLayout();
         }
 
-        // ─────────────────────────── Layout ───────────────────────────────────
         private void UpdateLayoutBounds()
+        {
+            Relayout();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            Relayout();
+        }
+
+        private void Relayout()
         {
             if (_headerPanel == null || _footerPanel == null || _scrollPanel == null)
                 return;
 
-            // Skip when minimized (ClientSize can be 0)
-            if (WindowState == FormWindowState.Minimized)
-                return;
-
             const int HEADER_H = 64;
-            const int FOOTER_H = 36;
+            const int FOOTER_H = 38;
+
             int cw = ClientSize.Width;
             int ch = ClientSize.Height;
-
             if (cw <= 0 || ch <= 0) return;
 
             // Header: full top
@@ -270,7 +331,12 @@ namespace OmniBattery.UI
 
             // Reposition header buttons right-aligned
             int btnX = cw - 14;
-            foreach (Button btn in new[] { _btnSettings, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin })
+            AeroGlassButton[] buttons = new[]
+            {
+                _btnSettings, _btnLanguage, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin
+            };
+
+            foreach (AeroGlassButton btn in buttons)
             {
                 if (btn == null) continue;
                 btnX -= btn.Width + 6;
@@ -281,75 +347,177 @@ namespace OmniBattery.UI
             _footerPanel.SetBounds(0, ch - FOOTER_H, cw, FOOTER_H);
 
             // Footer checkbox right-aligned
-            Control chk = _footerPanel.Controls.Count > 1 ? _footerPanel.Controls[1] : null;
-            if (chk != null)
-                chk.Location = new Point(cw - chk.Width - 16, 10);
+            if (_chkMinimize != null)
+                _chkMinimize.Location = new Point(cw - _chkMinimize.Width - 16, 10);
 
             // Scroll area: everything between header and footer
             int scrollH = Math.Max(60, ch - HEADER_H - FOOTER_H);
             _scrollPanel.SetBounds(0, HEADER_H, cw, scrollH);
 
-            // Cards flow width matches scroll panel (minus scrollbar)
-            _cardsFlow.MaximumSize = new Size(Math.Max(100, cw - 20), 0);
+            int usableW = _scrollPanel.ClientSize.Width - 28;
+            if (usableW > 100)
+            {
+                _cardsFlow.MaximumSize = new Size(usableW, 0);
+                _cardsFlow.Width = usableW;
+            }
+
+            CenterEmptyPanel();
         }
 
-        protected override void OnResize(EventArgs e)
+        private void CenterEmptyPanel()
         {
-            base.OnResize(e);
-            UpdateLayoutBounds();
+            if (_emptyPanel == null || _scrollPanel == null) return;
+            int scrollW = _scrollPanel.ClientSize.Width;
+            int scrollH = _scrollPanel.ClientSize.Height;
+            int x = Math.Max(10, (scrollW - _emptyPanel.Width) / 2);
+            int y = Math.Max(20, (scrollH - _emptyPanel.Height) / 2 - 20);
+            _emptyPanel.Margin = new Padding(x, y, 0, 0);
         }
 
-        // ─────────────────────────── Empty State ──────────────────────────────
+        // ─── Empty state panel ────────────────────────────────────────────────
         private void BuildEmptyStatePanel()
         {
             _emptyPanel = new Panel
             {
                 Size = new Size(540, 240),
-                BackColor = Color.Transparent,
-                Margin = new Padding(30)
+                BackColor = Color.FromArgb(24, 27, 40)
+            };
+            _emptyPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle r = new Rectangle(0, 0, _emptyPanel.Width - 1, _emptyPanel.Height - 1);
+                using (GraphicsPath p = CreateRoundedRect(r, 12))
+                {
+                    using (SolidBrush b = new SolidBrush(Color.FromArgb(24, 27, 40)))
+                        g.FillPath(b, p);
+                    using (Pen pen = new Pen(Color.FromArgb(45, 50, 75), 1.2f))
+                        g.DrawPath(pen, p);
+                }
             };
 
-            // Draw a battery icon via GDI instead of emoji to avoid glyph boxes
             PictureBox pbIcon = new PictureBox
             {
-                Size = new Size(60, 60),
-                BackColor = Color.Transparent,
-                Location = new Point(240, 10)
+                Size = new Size(52, 52),
+                Location = new Point(244, 18),
+                BackColor = Color.Transparent
             };
-            pbIcon.Paint += delegate(object s, PaintEventArgs pe)
+            pbIcon.Paint += (s, e) =>
             {
-                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                IconRenderer.DrawDeviceIcon(pe.Graphics,
-                    new Rectangle(0, 0, 60, 60),
-                    DeviceCategory.Generico,
-                    Color.FromArgb(88, 101, 242), null);
+                IconRenderer.DrawDeviceIcon(e.Graphics, new Rectangle(0, 0, 52, 52),
+                    DeviceCategory.Generico, Color.FromArgb(88, 101, 242), null);
             };
             _emptyPanel.Controls.Add(pbIcon);
 
-            Label lblEmptyMsg = new Label
+            _lblEmptyMsg = new Label
             {
-                Text = "Nenhum dispositivo sem fio detectado",
+                Text = I18n.T("NoDevicesTitle"),
                 Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 ForeColor = Color.White,
+                BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(0, 76),
                 Size = new Size(540, 32)
             };
-            _emptyPanel.Controls.Add(lblEmptyMsg);
+            _emptyPanel.Controls.Add(_lblEmptyMsg);
 
-            Label lblEmptyDesc = new Label
+            _lblEmptyDesc = new Label
             {
-                Text = "• Conecte seus receptores USB 2.4GHz (MCHOSE V9 Turbo, Attack Shark RS6, VK 87, Logitech...)\n" +
-                       "• Certifique-se de que os dispositivos estão ligados e o receptor USB encaixado.\n" +
-                       "• Clique em 'Atualizar' para fazer uma nova varredura agora.\n" +
-                       "• Cada dispositivo ganhará seu ícone com % na bandeja do sistema!",
+                Text = I18n.T("NoDevicesDesc1") + "\n" +
+                       I18n.T("NoDevicesDesc2") + "\n" +
+                       I18n.T("NoDevicesDesc3") + "\n" +
+                       I18n.T("NoDevicesDesc4"),
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.FromArgb(140, 145, 175),
+                BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.TopCenter,
                 Location = new Point(0, 114),
-                Size = new Size(540, 100)
+                Size = new Size(540, 110)
             };
-            _emptyPanel.Controls.Add(lblEmptyDesc);
+            _emptyPanel.Controls.Add(_lblEmptyDesc);
+        }
+
+        private static GraphicsPath CreateRoundedRect(Rectangle r, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = radius * 2;
+            path.AddArc(r.X, r.Y, d, d, 180, 90);
+            path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        // ─────────────────────────── Multi-Language Support ──────────────────
+        private string GetLanguageButtonText()
+        {
+            switch (I18n.CurrentLanguage)
+            {
+                case AppLanguage.EN: return "🌐 EN";
+                case AppLanguage.ES: return "🌐 ES";
+                default: return "🌐 PT";
+            }
+        }
+
+        private void OnLanguageButtonClick(object sender, EventArgs e)
+        {
+            ContextMenuStrip menu = new ContextMenuStrip();
+            menu.Renderer = new DarkToolStripRenderer();
+
+            Action<string, AppLanguage> addLang = (name, lang) =>
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(name);
+                item.Checked = (I18n.CurrentLanguage == lang);
+                item.Click += delegate
+                {
+                    _manager.Settings.Language = lang;
+                    _manager.Settings.Save();
+                    I18n.SetLanguage(lang);
+                };
+                menu.Items.Add(item);
+            };
+
+            addLang("Português (PT)", AppLanguage.PT);
+            addLang("English (EN)", AppLanguage.EN);
+            addLang("Español (ES)", AppLanguage.ES);
+
+            menu.Show(_btnLanguage, new Point(0, _btnLanguage.Height + 2));
+        }
+
+        private void ApplyLanguage()
+        {
+            Text = I18n.T("AppTitle");
+
+            if (_btnAdmin != null) _btnAdmin.Text = I18n.T("BtnAdmin");
+            if (_btnBackground != null) _btnBackground.Text = I18n.T("BtnBackground");
+            if (_btnOverlay != null) _btnOverlay.Text = (_overlayForm != null && _overlayForm.Visible) ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay");
+            if (_btnHistory != null) _btnHistory.Text = I18n.T("BtnHistory");
+            if (_btnRefresh != null) _btnRefresh.Text = _isScanning ? I18n.T("BtnScanning") : I18n.T("BtnRefresh");
+            if (_btnSettings != null) _btnSettings.Text = I18n.T("BtnSettings");
+            if (_btnLanguage != null) _btnLanguage.Text = GetLanguageButtonText();
+            if (_chkMinimize != null) _chkMinimize.Text = I18n.T("MinToTrayOnClose");
+
+            if (_lblEmptyMsg != null) _lblEmptyMsg.Text = I18n.T("NoDevicesTitle");
+            if (_lblEmptyDesc != null)
+            {
+                _lblEmptyDesc.Text = I18n.T("NoDevicesDesc1") + "\n" +
+                                     I18n.T("NoDevicesDesc2") + "\n" +
+                                     I18n.T("NoDevicesDesc3") + "\n" +
+                                     I18n.T("NoDevicesDesc4");
+            }
+
+            if (!_isScanning && _lblStatus != null)
+            {
+                _lblStatus.Text = I18n.T("LastUpdatedStatus", DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
+            }
+
+            Relayout();
+
+            foreach (DeviceCardControl card in _cardControls.Values)
+            {
+                card.Invalidate();
+            }
         }
 
         // ─────────────────────────── Background ───────────────────────────────
@@ -413,7 +581,7 @@ namespace OmniBattery.UI
             {
                 menu.Items.Add(new ToolStripSeparator());
 
-                ToolStripMenuItem itemRemove = new ToolStripMenuItem("Remover Imagem (Fundo Padrao Escuro)");
+                ToolStripMenuItem itemRemove = new ToolStripMenuItem("Remover Imagem (Fundo Padrão Escuro)");
                 itemRemove.Click += delegate
                 {
                     _manager.Settings.BackgroundImagePath = "";
@@ -428,7 +596,7 @@ namespace OmniBattery.UI
                 {
                     int curOp = op;
                     ToolStripMenuItem opItem = new ToolStripMenuItem(string.Format("{0}% de escurecimento", op));
-                    opItem.Checked = (_bgOpacity == op);
+                    opItem.Checked = (_bgOpacity == curOp);
                     opItem.Click += delegate
                     {
                         _bgOpacity = curOp;
@@ -445,23 +613,29 @@ namespace OmniBattery.UI
             menu.Show(_btnBackground, new Point(0, _btnBackground.Height + 2));
         }
 
-        // ─────────────────────────── Events ───────────────────────────────────
+        private void OnHistoryClick(object sender, EventArgs e)
+        {
+            HistoryForm hf = new HistoryForm(_manager);
+            hf.ShowDialog(this);
+        }
+
+        // ─────────────────────────── Scanning / Updates ───────────────────────
         private void OnScanStateChanged(bool isScanning)
         {
             if (InvokeRequired) { Invoke(new Action<bool>(OnScanStateChanged), isScanning); return; }
+            _isScanning = isScanning;
 
             if (isScanning)
             {
                 _btnRefresh.Enabled = false;
-                _btnRefresh.Text = "Varrendo...";
-                _lblStatus.Text = "Buscando perifericos sem fio...";
+                _btnRefresh.Text = I18n.T("BtnScanning");
+                _lblStatus.Text = I18n.T("ScanningStatus");
             }
             else
             {
                 _btnRefresh.Enabled = true;
-                _btnRefresh.Text = "Atualizar";
-                _lblStatus.Text = string.Format("Ultima atualizacao as {0:HH:mm:ss} (Proxima em {1}s)",
-                    DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
+                _btnRefresh.Text = I18n.T("BtnRefresh");
+                _lblStatus.Text = I18n.T("LastUpdatedStatus", DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
             }
         }
 
@@ -470,29 +644,33 @@ namespace OmniBattery.UI
             if (InvokeRequired) { Invoke(new Action<List<BatteryDevice>>(OnDevicesUpdated), devices); return; }
 
             int count = (devices != null) ? devices.Count : 0;
-            _lblDeviceCount.Text = string.Format("{0} dispositivo(s)", count);
+            _lblDeviceCount.Text = I18n.T("DevicesCount", count);
 
             _cardsFlow.SuspendLayout();
 
             if (devices == null || devices.Count == 0)
             {
-                _cardsFlow.Controls.Clear();
+                foreach (var kvp in _cardControls)
+                    _cardsFlow.Controls.Remove(kvp.Value);
                 _cardControls.Clear();
-                _cardsFlow.Controls.Add(_emptyPanel);
-                _cardsFlow.ResumeLayout(true);
+
+                if (!_cardsFlow.Controls.Contains(_emptyPanel))
+                    _cardsFlow.Controls.Add(_emptyPanel);
+
+                _emptyPanel.Visible = true;
+                _cardsFlow.ResumeLayout();
+                CenterEmptyPanel();
                 return;
             }
 
-            if (_cardsFlow.Controls.Contains(_emptyPanel))
-                _cardsFlow.Controls.Remove(_emptyPanel);
+            _emptyPanel.Visible = false;
+            _cardsFlow.Controls.Remove(_emptyPanel);
 
             HashSet<string> currentKeys = new HashSet<string>();
+
             foreach (BatteryDevice dev in devices)
             {
-                if (!dev.IsConnected)
-                    continue;
-
-                string key = !string.IsNullOrEmpty(dev.Id) ? dev.Id : dev.Name;
+                string key = dev.DeviceKey;
                 currentKeys.Add(key);
 
                 if (_cardControls.ContainsKey(key))
@@ -503,78 +681,101 @@ namespace OmniBattery.UI
                 {
                     DeviceCardControl card = new DeviceCardControl(dev);
                     card.RequestColorChange += OnRequestColorChange;
-                    card.RequestIconChange += OnCardRequestIconChange;
-                    card.RequestHideDevice += OnCardRequestHideDevice;
-                    card.RequestTrayToggle += OnCardRequestTrayToggle;
+                    card.RequestIconChange  += OnRequestIconChange;
+                    card.RequestHideDevice  += OnRequestHideDevice;
+                    card.RequestTrayToggle  += OnRequestTrayToggle;
+
                     _cardControls[key] = card;
                     _cardsFlow.Controls.Add(card);
                 }
             }
 
             List<string> toRemove = new List<string>();
-            foreach (string k in _cardControls.Keys)
-                if (!currentKeys.Contains(k)) toRemove.Add(k);
-
-            foreach (string rk in toRemove)
+            foreach (var kvp in _cardControls)
             {
-                _cardsFlow.Controls.Remove(_cardControls[rk]);
-                _cardControls[rk].Dispose();
-                _cardControls.Remove(rk);
+                if (!currentKeys.Contains(kvp.Key))
+                    toRemove.Add(kvp.Key);
             }
 
-            _cardsFlow.ResumeLayout(true);
-        }
-
-        private void OnRequestColorChange(BatteryDevice dev)
-        {
-            using (ColorDialog cd = new ColorDialog())
+            foreach (string remKey in toRemove)
             {
-                cd.Color = dev.GetEffectiveColor();
-                cd.FullOpen = true;
-                if (cd.ShowDialog(this) == DialogResult.OK)
-                    _manager.SetCustomDeviceColor(dev, cd.Color);
+                _cardsFlow.Controls.Remove(_cardControls[remKey]);
+                _cardControls[remKey].Dispose();
+                _cardControls.Remove(remKey);
             }
+
+            _cardsFlow.ResumeLayout();
+            Relayout();
         }
 
-        private void OnCardRequestIconChange(BatteryDevice dev, string customPath)
-        {
-            if (!string.IsNullOrEmpty(customPath))
-                _manager.SetDeviceIcon(dev, customPath);
-            else if (dev != null && dev.CustomCategory.HasValue)
-                _manager.SetDeviceIcon(dev, dev.CustomCategory.Value.ToString());
-            else if (dev == null)
-                _manager.ResetDeviceIcon(dev);
-        }
-
-        private void OnCardRequestHideDevice(BatteryDevice dev)
-        {
-            DialogResult dr = MessageBox.Show(
-                string.Format("Deseja desligar '{0}'?\n\nEle sairá da tela de dispositivos conectados e poderá ser reativado a qualquer momento no Histórico.", dev.Name),
-                "Desligar Dispositivo", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (dr == DialogResult.Yes)
-                _manager.DisconnectDevice(dev);
-        }
-
-        private void OnCardRequestTrayToggle(BatteryDevice dev, bool enabled)
+        private void OnRequestTrayToggle(BatteryDevice dev, bool enabled)
         {
             _manager.SetDeviceTrayIconEnabled(dev, enabled);
         }
 
-        private void OnHistoryClick(object sender, EventArgs e)
+        private void OnRequestHideDevice(BatteryDevice dev)
         {
-            using (HistoryForm hf = new HistoryForm(_manager))
+            if (dev == null) return;
+            _manager.SetDeviceHidden(dev, true);
+            _manager.TriggerScanAsync();
+        }
+
+        private void OnRequestColorChange(BatteryDevice dev)
+        {
+            if (dev == null) return;
+
+            using (ColorDialog cd = new ColorDialog())
             {
-                hf.ShowDialog(this);
+                cd.Color = dev.GetEffectiveColor();
+                cd.FullOpen = true;
+
+                if (cd.ShowDialog(this) == DialogResult.OK)
+                {
+                    _manager.SetCustomDeviceColor(dev, cd.Color);
+                    if (_cardControls.ContainsKey(dev.DeviceKey))
+                        _cardControls[dev.DeviceKey].Invalidate();
+                }
             }
         }
 
-        // ─────────────────────────── Admin ────────────────────────────────────
+        private void OnRequestIconChange(BatteryDevice dev, string customPath)
+        {
+            if (dev == null && customPath == null)
+            {
+                foreach (var card in _cardControls.Values)
+                    _manager.ResetDeviceIcon(card.Device);
+                _cardsFlow.Invalidate(true);
+                return;
+            }
+
+            if (dev == null) return;
+
+            if (customPath == null)
+            {
+                if (dev.CustomCategory.HasValue)
+                {
+                    string catStr = "cat:" + dev.CustomCategory.Value.ToString();
+                    _manager.SetDeviceIcon(dev, catStr);
+                }
+            }
+            else
+            {
+                _manager.SetDeviceIcon(dev, customPath);
+            }
+
+            if (_cardControls.ContainsKey(dev.DeviceKey))
+                _cardControls[dev.DeviceKey].Invalidate();
+        }
+
         private bool IsRunningAsAdmin()
         {
             try
             {
-                WindowsIdentity id = WindowsIdentity.GetCurrent();
-                return new WindowsPrincipal(id).IsInRole(WindowsBuiltInRole.Administrator);
+                using (WindowsIdentity id = WindowsIdentity.GetCurrent())
+                {
+                    WindowsPrincipal principal = new WindowsPrincipal(id);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
+                }
             }
             catch { return false; }
         }
@@ -599,72 +800,81 @@ namespace OmniBattery.UI
         {
             using (Form sf = new Form())
             {
-                sf.Text = "Configurações - Batuja";
-                sf.Size = new Size(400, 530);
+                sf.Text = I18n.T("SettingsTitle");
+                sf.Size = new Size(420, 560);
                 sf.StartPosition = FormStartPosition.CenterParent;
                 sf.FormBorderStyle = FormBorderStyle.FixedDialog;
                 sf.MaximizeBox = false; sf.MinimizeBox = false;
-                sf.BackColor = Color.FromArgb(28, 31, 46);
+                sf.BackColor = Color.FromArgb(24, 27, 40);
                 sf.ForeColor = Color.White;
                 sf.Font = new Font("Segoe UI", 9f);
 
                 int y = 20;
 
-                Label lbl1 = new Label { Text = "Intervalo de Varredura (segundos):", Location = new Point(20, y), AutoSize = true };
+                Label lbl1 = new Label { Text = I18n.T("RefreshIntervalLabel"), Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(lbl1); y += 24;
 
-                NumericUpDown numInt = new NumericUpDown { Location = new Point(20, y), Width = 100, Minimum = 5, Maximum = 3600, Value = _manager.Settings.RefreshIntervalSeconds, BackColor = Color.FromArgb(40, 44, 65), ForeColor = Color.White };
+                NumericUpDown numInt = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 3600, Value = _manager.Settings.RefreshIntervalSeconds, BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White };
                 sf.Controls.Add(numInt); y += 34;
 
-                Label lbl2 = new Label { Text = "Alerta de Bateria Fraca (%):", Location = new Point(20, y), AutoSize = true };
+                Label lbl2 = new Label { Text = I18n.T("LowBatteryThresholdLabel"), Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(lbl2); y += 24;
 
-                NumericUpDown numThr = new NumericUpDown { Location = new Point(20, y), Width = 100, Minimum = 5, Maximum = 50, Value = _manager.Settings.LowBatteryThreshold, BackColor = Color.FromArgb(40, 44, 65), ForeColor = Color.White };
+                NumericUpDown numThr = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 50, Value = _manager.Settings.LowBatteryThreshold, BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White };
                 sf.Controls.Add(numThr); y += 34;
 
-                CheckBox chkNotif = new CheckBox { Text = "Exibir notificacoes na bandeja", Checked = _manager.Settings.EnableNotifications, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkNotif = new CheckBox { Text = I18n.T("EnableNotifLabel"), Checked = _manager.Settings.EnableNotifications, Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(chkNotif); y += 28;
 
-                CheckBox chkBoot = new CheckBox { Text = "Iniciar com o Windows", Checked = _manager.Settings.StartWithWindows, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkBoot = new CheckBox { Text = I18n.T("StartWithWinLabel"), Checked = _manager.Settings.StartWithWindows, Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(chkBoot); y += 28;
 
-                CheckBox chkSys = new CheckBox { Text = "Exibir bateria do Notebook/Sistema", Checked = _manager.Settings.ShowSystemBattery, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkSys = new CheckBox { Text = I18n.T("ShowSysBatLabel"), Checked = _manager.Settings.ShowSystemBattery, Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(chkSys); y += 32;
 
-                Label lblStyle = new Label { Text = "Estilo dos ícones da bandeja:", Location = new Point(20, y), AutoSize = true };
+                Label lblStyle = new Label { Text = I18n.T("TrayStyleLabel"), Location = new Point(20, y), AutoSize = true };
                 sf.Controls.Add(lblStyle); y += 24;
 
                 ComboBox cmbStyle = new ComboBox
                 {
-                    Location = new Point(20, y), Width = 240,
+                    Location = new Point(20, y), Width = 260,
                     DropDownStyle = ComboBoxStyle.DropDownList,
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(40, 44, 65), ForeColor = Color.White
+                    BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White
                 };
                 TrayIconStyle[] styles = (TrayIconStyle[])Enum.GetValues(typeof(TrayIconStyle));
                 foreach (TrayIconStyle st in styles)
                     cmbStyle.Items.Add(TrayManager.GetStyleLabel(st));
                 cmbStyle.SelectedIndex = Array.IndexOf(styles, _manager.Settings.TrayStyle);
-                sf.Controls.Add(cmbStyle); y += 38;
+                sf.Controls.Add(cmbStyle); y += 36;
+
+                // Language selector
+                Label lblLang = new Label { Text = I18n.T("LanguageLabel"), Location = new Point(20, y), AutoSize = true };
+                sf.Controls.Add(lblLang); y += 24;
+
+                ComboBox cmbLang = new ComboBox
+                {
+                    Location = new Point(20, y), Width = 260,
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White
+                };
+                cmbLang.Items.Add("Português (PT)");
+                cmbLang.Items.Add("English (EN)");
+                cmbLang.Items.Add("Español (ES)");
+                cmbLang.SelectedIndex = (int)_manager.Settings.Language;
+                sf.Controls.Add(cmbLang); y += 42;
 
                 if (_manager.Settings.HiddenDevices.Count > 0)
                 {
-                    Button btnRestore = CreateStyledButton(string.Format("Restaurar Dispositivos Ocultos ({0})", _manager.Settings.HiddenDevices.Count), Color.FromArgb(50, 55, 80));
-                    btnRestore.Location = new Point(20, y); btnRestore.Size = new Size(260, 28);
-                    btnRestore.Click += delegate { _manager.Settings.HiddenDevices.Clear(); _manager.Settings.Save(); _manager.TriggerScanAsync(); btnRestore.Enabled = false; btnRestore.Text = "Restaurados!"; };
-                    sf.Controls.Add(btnRestore); y += 36;
+                    AeroGlassButton btnRestore = CreateStyledButton(string.Format("Restaurar Dispositivos ({0})", _manager.Settings.HiddenDevices.Count), Color.FromArgb(50, 55, 80));
+                    btnRestore.Location = new Point(20, y); btnRestore.Size = new Size(260, 30);
+                    btnRestore.Click += delegate { _manager.Settings.HiddenDevices.Clear(); _manager.Settings.Save(); _manager.TriggerScanAsync(); btnRestore.Enabled = false; };
+                    sf.Controls.Add(btnRestore); y += 38;
                 }
 
-                if (_manager.Settings.DisconnectedDevices.Count > 0)
-                {
-                    Button btnResetOff = CreateStyledButton(string.Format("Reativar Dispositivos Desligados ({0})", _manager.Settings.DisconnectedDevices.Count), Color.FromArgb(50, 55, 80));
-                    btnResetOff.Location = new Point(20, y); btnResetOff.Size = new Size(260, 28);
-                    btnResetOff.Click += delegate { _manager.Settings.DisconnectedDevices.Clear(); _manager.Settings.Save(); _manager.TriggerScanAsync(); btnResetOff.Enabled = false; btnResetOff.Text = "Reativados!"; };
-                    sf.Controls.Add(btnResetOff); y += 36;
-                }
-
-                Button btnSave = CreateStyledButton("Salvar", Color.FromArgb(88, 101, 242));
-                btnSave.Location = new Point(200, y); btnSave.Size = new Size(80, 30);
+                AeroGlassButton btnSave = CreateStyledButton(I18n.T("BtnSave"), Color.FromArgb(88, 101, 242));
+                btnSave.Location = new Point(190, y); btnSave.Size = new Size(95, 32);
                 btnSave.Click += delegate
                 {
                     _manager.Settings.RefreshIntervalSeconds = (int)numInt.Value;
@@ -672,6 +882,14 @@ namespace OmniBattery.UI
                     _manager.Settings.EnableNotifications = chkNotif.Checked;
                     _manager.Settings.StartWithWindows = chkBoot.Checked;
                     _manager.Settings.ShowSystemBattery = chkSys.Checked;
+
+                    if (cmbLang.SelectedIndex >= 0)
+                    {
+                        AppLanguage newLang = (AppLanguage)cmbLang.SelectedIndex;
+                        _manager.Settings.Language = newLang;
+                        I18n.SetLanguage(newLang);
+                    }
+
                     _manager.Settings.Save();
                     AutostartManager.SetAutostart(chkBoot.Checked);
                     _manager.UpdateRefreshInterval((int)numInt.Value);
@@ -681,7 +899,8 @@ namespace OmniBattery.UI
                 };
                 sf.Controls.Add(btnSave);
 
-                Button btnCancel = CreateStyledButton("Cancelar", Color.FromArgb(45, 49, 72)); btnCancel.Location = new Point(292, y); btnCancel.Size = new Size(80, 30);
+                AeroGlassButton btnCancel = CreateStyledButton(I18n.T("BtnCancel"), Color.FromArgb(42, 48, 70));
+                btnCancel.Location = new Point(295, y); btnCancel.Size = new Size(95, 32);
                 btnCancel.Click += delegate { sf.Close(); };
                 sf.Controls.Add(btnCancel);
 
@@ -690,18 +909,16 @@ namespace OmniBattery.UI
         }
 
         // ─────────────────────────── Helpers ──────────────────────────────────
-        private Button CreateStyledButton(string text, Color bg)
+        private AeroGlassButton CreateStyledButton(string text, Color bg)
         {
-            Button btn = new Button
+            AeroGlassButton btn = new AeroGlassButton
             {
                 Text = text,
-                BackColor = bg,
+                BaseGlassColor = bg,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                CornerRadius = 8
             };
-            btn.FlatAppearance.BorderSize = 0;
             return btn;
         }
 
@@ -716,16 +933,13 @@ namespace OmniBattery.UI
 
             base.OnFormClosing(e);
 
-            // Durante Application.Exit(), o Windows Forms já enumera e fecha todos os formulários abertos.
-            // Chamar Dispose() em outro Form aqui modificaria Application.OpenForms durante essa enumeração.
             if (e.CloseReason != CloseReason.ApplicationExitCall &&
                 e.CloseReason != CloseReason.WindowsShutDown &&
                 e.CloseReason != CloseReason.TaskManagerClosing)
             {
                 if (_overlayForm != null && !_overlayForm.IsDisposed)
                 {
-                    _overlayForm.Dispose();
-                    _overlayForm = null;
+                    _overlayForm.Close();
                 }
             }
 
@@ -742,7 +956,6 @@ namespace OmniBattery.UI
         }
 
         // ─────────────────── BgScrollPanel ────────────────────────────────────
-        // A Panel that owns the scrollbar AND draws the background behind cards.
         private class BgScrollPanel : Panel
         {
             public Image BgImage { get; set; }
@@ -760,7 +973,7 @@ namespace OmniBattery.UI
             {
                 Graphics g = e.Graphics;
                 Rectangle clip = new Rectangle(0, 0, Width, Height);
-                g.Clear(Color.FromArgb(20, 22, 32));
+                g.Clear(Color.FromArgb(18, 20, 30));
 
                 if (BgImage != null)
                 {
@@ -768,14 +981,13 @@ namespace OmniBattery.UI
                     {
                         g.DrawImage(BgImage, clip);
                         int alpha = Math.Min(255, Math.Max(0, (int)(BgOpacity * 2.55)));
-                        using (SolidBrush tint = new SolidBrush(Color.FromArgb(alpha, 16, 18, 28)))
+                        using (SolidBrush tint = new SolidBrush(Color.FromArgb(alpha, 14, 16, 26)))
                             g.FillRectangle(tint, clip);
                     }
                     catch { }
                 }
             }
 
-            // Make sure mouse wheel on child controls bubbles up to this panel
             protected override void OnMouseWheel(MouseEventArgs e)
             {
                 base.OnMouseWheel(e);

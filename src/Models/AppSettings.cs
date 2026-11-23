@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using OmniBattery.Core;
 
 namespace OmniBattery.Models
 {
@@ -35,6 +36,7 @@ namespace OmniBattery.Models
         public int OverlayY { get; set; }
         public bool OverlayVertical { get; set; }
         public int OverlayOpacity { get; set; }
+        public AppLanguage Language { get; set; }
 
         private static string ConfigPath
         {
@@ -66,6 +68,7 @@ namespace OmniBattery.Models
             OverlayY = -1;
             OverlayVertical = false;
             OverlayOpacity = 90;
+            Language = AppLanguage.PT;
         }
 
         public Color? GetCustomColor(string deviceKey)
@@ -333,6 +336,14 @@ namespace OmniBattery.Models
                             if (int.TryParse(val, out op) && op >= 20 && op <= 100)
                                 settings.OverlayOpacity = op;
                             break;
+                        case "language":
+                            AppLanguage al;
+                            if (Enum.TryParse(val, true, out al))
+                            {
+                                settings.Language = al;
+                                I18n.CurrentLanguage = al;
+                            }
+                            break;
                     }
                 }
             }
@@ -364,6 +375,7 @@ namespace OmniBattery.Models
                 sb.AppendLine(string.Format("OverlayY={0}", OverlayY));
                 sb.AppendLine(string.Format("OverlayVertical={0}", OverlayVertical));
                 sb.AppendLine(string.Format("OverlayOpacity={0}", OverlayOpacity));
+                sb.AppendLine(string.Format("Language={0}", Language));
 
                 sb.AppendLine();
                 sb.AppendLine("# Cores Personalizadas dos Dispositivos");

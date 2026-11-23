@@ -86,7 +86,9 @@ namespace OmniBattery.UI
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Renderer = new DarkToolStripRenderer();
 
-            ToolStripMenuItem itemOrient = new ToolStripMenuItem("Alternar Orientação (Horizontal / Vertical)");
+            string txtOrient = I18n.CurrentLanguage == AppLanguage.EN ? "Toggle Orientation (Horizontal / Vertical)" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Alternar Orientación (Horizontal / Vertical)" : "Alternar Orientação (Horizontal / Vertical)");
+            ToolStripMenuItem itemOrient = new ToolStripMenuItem(txtOrient);
             itemOrient.Click += delegate
             {
                 _manager.Settings.OverlayVertical = !_manager.Settings.OverlayVertical;
@@ -98,7 +100,9 @@ namespace OmniBattery.UI
             ToolStripSeparator sep1 = new ToolStripSeparator();
             menu.Items.Add(sep1);
 
-            ToolStripMenuItem itemOpacity = new ToolStripMenuItem("Opacidade");
+            string txtOpacity = I18n.CurrentLanguage == AppLanguage.EN ? "Opacity" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Opacidad" : "Opacidade");
+            ToolStripMenuItem itemOpacity = new ToolStripMenuItem(txtOpacity);
             int[] opacities = new int[] { 100, 90, 75, 60, 45 };
             foreach (int op in opacities)
             {
@@ -114,7 +118,9 @@ namespace OmniBattery.UI
             }
             menu.Items.Add(itemOpacity);
 
-            ToolStripMenuItem itemLock = new ToolStripMenuItem("Bloquear Posição");
+            string txtLock = I18n.CurrentLanguage == AppLanguage.EN ? "Lock Position" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Bloquear Posición" : "Bloquear Posição");
+            ToolStripMenuItem itemLock = new ToolStripMenuItem(txtLock);
             itemLock.CheckOnClick = true;
             itemLock.Checked = _isLocked;
             itemLock.CheckedChanged += delegate
@@ -126,7 +132,9 @@ namespace OmniBattery.UI
             ToolStripSeparator sep2 = new ToolStripSeparator();
             menu.Items.Add(sep2);
 
-            ToolStripMenuItem itemClose = new ToolStripMenuItem("Ocultar Sobreposição");
+            string txtClose = I18n.CurrentLanguage == AppLanguage.EN ? "Hide Overlay" :
+                (I18n.CurrentLanguage == AppLanguage.ES ? "Ocultar Superposición" : "Ocultar Sobreposição");
+            ToolStripMenuItem itemClose = new ToolStripMenuItem(txtClose);
             itemClose.Click += delegate { HideOverlay(); };
             menu.Items.Add(itemClose);
 
@@ -299,7 +307,7 @@ namespace OmniBattery.UI
             {
                 using (Font ef = new Font("Segoe UI", 8.5f))
                 {
-                    g.DrawString("Batuja: Nenhum dispositivo sem fio ligado", ef, new SolidBrush(Color.FromArgb(140, 145, 170)), 14, (Height - 16) / 2);
+                    g.DrawString(I18n.T("OverlayNoDevices"), ef, new SolidBrush(Color.FromArgb(140, 145, 170)), 14, (Height - 16) / 2);
                 }
                 return;
             }

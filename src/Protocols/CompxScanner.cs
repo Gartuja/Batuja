@@ -426,14 +426,18 @@ namespace OmniBattery.Protocols
                 }
             }
 
+            // FILTRO ESTRITO DO USUÁRIO: Apenas fones de ouvido, mouse e teclado!
+            if (category != DeviceCategory.Mouse &&
+                category != DeviceCategory.Teclado &&
+                category != DeviceCategory.FoneDeOuvido)
+            {
+                return null;
+            }
+
             // Se o receptor/dispositivo sem fio está conectado ao computador, garante presença na tela
             bool isDevConnected = true;
             if (detectedBattery < 0)
             {
-                // Dispositivo genérico sem telemetria e sem categoria sem fio reconhecida não deve ser exibido como bateria
-                if (category == DeviceCategory.Generico && !IsLikelyWirelessDevice(group, friendlyName))
-                    return null;
-
                 // Valor padrão ou estimado enquanto aguarda telemetria completa
                 detectedBattery = 90;
             }

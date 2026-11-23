@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Windows.Forms;
+using OmniBattery.Core;
 using OmniBattery.Models;
 
 namespace OmniBattery.UI
@@ -143,21 +144,21 @@ namespace OmniBattery.UI
                 menu.Items.Add(item);
             };
 
-            addCat("Mouse", DeviceCategory.Mouse);
-            addCat("Teclado", DeviceCategory.Teclado);
-            addCat("Fone de Ouvido / Headset", DeviceCategory.FoneDeOuvido);
-            addCat("Controle / Gamepad", DeviceCategory.Controle);
-            addCat("Laptop / Notebook", DeviceCategory.Laptop);
-            addCat("Bateria / Generico", DeviceCategory.Generico);
+            addCat(I18n.T("CatMouse"), DeviceCategory.Mouse);
+            addCat(I18n.T("CatKeyboard"), DeviceCategory.Teclado);
+            addCat(I18n.T("CatHeadphones"), DeviceCategory.FoneDeOuvido);
+            addCat(I18n.T("CatGamepad"), DeviceCategory.Controle);
+            addCat(I18n.T("CatLaptop"), DeviceCategory.Laptop);
+            addCat(I18n.T("CatGeneric"), DeviceCategory.Generico);
 
             menu.Items.Add(new ToolStripSeparator());
 
             // Custom image file
-            menu.Items.Add("Escolher Imagem (.png, .ico, .jpg, .gif)...", null, delegate
+            menu.Items.Add(I18n.T("ChooseImageFile"), null, delegate
             {
                 using (OpenFileDialog ofd = new OpenFileDialog())
                 {
-                    ofd.Title = "Icone personalizado para " + _device.Name;
+                    ofd.Title = _device.Name;
                     ofd.Filter = "Imagens (*.png;*.ico;*.jpg;*.jpeg;*.gif)|*.png;*.ico;*.jpg;*.jpeg;*.gif";
                     if (ofd.ShowDialog() == DialogResult.OK)
                     {
@@ -171,7 +172,7 @@ namespace OmniBattery.UI
             });
 
             // Reset to auto-detected icon
-            menu.Items.Add("Restaurar Icone Automatico", null, delegate
+            menu.Items.Add(I18n.T("RestoreAutoIcon"), null, delegate
             {
                 _device.CustomIconPath = null;
                 _device.CustomCategory = null;
@@ -204,14 +205,23 @@ namespace OmniBattery.UI
             Rectangle rect = new Rectangle(1, 1, Width - 2, Height - 2);
             Color effectiveColor = _device != null ? _device.GetEffectiveColor() : Color.FromArgb(88, 101, 242);
             bool isConn = _device != null && _device.IsConnected;
-            Color bgColor = !isConn ? Color.FromArgb(20, 22, 33) : (_isHovered ? Color.FromArgb(37, 40, 58) : Color.FromArgb(28, 31, 46));
-            Color borderColor = !isConn ? (_isHovered ? Color.FromArgb(60, 65, 90) : Color.FromArgb(35, 38, 54)) : (_isHovered ? effectiveColor : Color.FromArgb(48, 52, 76));
+            Color bgColor = !isConn ? Color.FromArgb(20, 22, 33) : (_isHovered ? Color.FromArgb(36, 40, 58) : Color.FromArgb(26, 29, 44));
+            Color borderColor = !isConn ? (_isHovered ? Color.FromArgb(60, 65, 90) : Color.FromArgb(35, 38, 54)) : (_isHovered ? effectiveColor : Color.FromArgb(48, 54, 80));
 
-            // ── Card background with rounded corners ─────────────────────────
-            using (GraphicsPath path = RoundedRect(rect, 10))
+            // ── Card background with AeroGlass frosted styling ─────────────────
+            using (GraphicsPath path = RoundedRect(rect, 12))
             {
                 using (SolidBrush b = new SolidBrush(bgColor)) g.FillPath(b, path);
-                using (Pen p = new Pen(borderColor, _isHovered ? 1.8f : 1.2f)) g.DrawPath(p, path);
+
+                // Top AeroGlass shine
+                Rectangle shineRect = new Rectangle(rect.X + 2, rect.Y + 2, rect.Width - 4, 38);
+                using (GraphicsPath sp = RoundedRect(shineRect, 10))
+                using (LinearGradientBrush s = new LinearGradientBrush(shineRect, Color.FromArgb(_isHovered ? 36 : 18, 255, 255, 255), Color.FromArgb(2, 255, 255, 255), 90f))
+                {
+                    g.FillPath(s, sp);
+                }
+
+                using (Pen p = new Pen(borderColor, _isHovered ? 1.6f : 1.1f)) g.DrawPath(p, path);
             }
 
             if (_device == null) return;
@@ -231,13 +241,13 @@ namespace OmniBattery.UI
 
             // ── Top-right: [● Ícone Ligado] and [x] ───────────────────────────
             int btnY = 14;
-            int btnH = 22;
-            int btnStatusW = 108;
+            int btnH = 24;
+            int btnStatusW = 114;
             _btnStatusRect = new Rectangle(Width - btnStatusW - 30, btnY, btnStatusW, btnH);
             _btnHideRect   = new Rectangle(Width - 24,  btnY, 18, btnH);
 
             bool trayOn = _device.IsTrayIconEnabled;
-            string statusLabel = trayOn ? "● Ícone Ligado" : "○ Ícone Desligado";
+            string statusLabel = trayOn ? I18n.T("IconOn") : I18n.T("IconOff");
             Color statusColor = trayOn ? Color.FromArgb(46, 204, 113) : Color.FromArgb(140, 145, 170);
             DrawStatusButton(g, _btnStatusRect, statusLabel, _isStatusHovered, statusColor, trayOn);
 
@@ -245,7 +255,7 @@ namespace OmniBattery.UI
             using (Font xf = new Font("Segoe UI", 10f, FontStyle.Bold))
             {
                 Color xc = _isHideHovered ? Color.FromArgb(255, 100, 100) : Color.FromArgb(100, 105, 135);
-                g.DrawString("x", xf, new SolidBrush(xc), _btnHideRect.X + 2, _btnHideRect.Y + 1);
+                g.DrawString("x", xf, new SolidBrush(xc), _btnHideRect.X + 2, _btnHideRect.Y + 2);
             }
 
             // ── Device name (full width available) ───────────────────────────
@@ -269,19 +279,21 @@ namespace OmniBattery.UI
             using (Font pf = new Font("Segoe UI", 7.5f))
             {
                 SizeF ps = g.MeasureString(proto, pf);
-                Rectangle badge = new Rectangle(curX, 39, (int)ps.Width + 10, 19);
-                using (GraphicsPath bp = RoundedRect(badge, 4))
-                using (SolidBrush bb = new SolidBrush(isConn ? Color.FromArgb(42, 45, 68) : Color.FromArgb(30, 32, 48)))
+                Rectangle badge = new Rectangle(curX, 39, (int)ps.Width + 10, 20);
+                using (GraphicsPath bp = RoundedRect(badge, 5))
+                using (SolidBrush bb = new SolidBrush(isConn ? Color.FromArgb(38, 42, 64) : Color.FromArgb(28, 30, 44)))
                     g.FillPath(bb, bp);
-                g.DrawString(proto, pf, new SolidBrush(isConn ? Color.FromArgb(180, 185, 210) : Color.FromArgb(120, 125, 150)), curX + 5, 41);
+                g.DrawString(proto, pf, new SolidBrush(isConn ? Color.FromArgb(180, 185, 210) : Color.FromArgb(120, 125, 150)), curX + 5, 42);
                 curX += (int)ps.Width + 14;
             }
 
             // [Icone] and [Cor] buttons on second row
-            _btnIconRect  = new Rectangle(curX, 39, 44, 19);
-            _btnColorRect = new Rectangle(curX + 48, 39, 42, 19);
-            DrawSmallButton(g, _btnIconRect,  "Icone", _isIconHovered,  effectiveColor, false);
-            DrawSmallButton(g, _btnColorRect, "Cor",   _isColorHovered, effectiveColor, true);
+            string iconBtnText = I18n.T("BtnIcon");
+            string colorBtnText = I18n.T("BtnColor");
+            _btnIconRect  = new Rectangle(curX, 39, 48, 20);
+            _btnColorRect = new Rectangle(curX + 52, 39, 46, 20);
+            DrawSmallButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  effectiveColor, false);
+            DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
             // ── Percentage / Status ──────────────────────────────────────────
             string pct = _device.GetFormattedPercentage();
@@ -293,13 +305,13 @@ namespace OmniBattery.UI
                 g.DrawString(pct, pctF, new SolidBrush(effectiveColor), pctX, pctY);
             }
 
-            // ── Battery bar ──────────────────────────────────────────────────
+            // ── Battery bar (Glossy AeroGlass tube) ───────────────────────────
             int barX = 14, barY = 82;
             int barW = Width - 120, barH = 10;
             Rectangle barBg = new Rectangle(barX, barY, barW, barH);
 
             using (GraphicsPath bgP = RoundedRect(barBg, 5))
-            using (SolidBrush bgB = new SolidBrush(isConn ? Color.FromArgb(45, 49, 72) : Color.FromArgb(30, 32, 48)))
+            using (SolidBrush bgB = new SolidBrush(isConn ? Color.FromArgb(42, 46, 68) : Color.FromArgb(28, 30, 44)))
                 g.FillPath(bgB, bgP);
 
             if (isConn && _device.BatteryPercent > 0)
@@ -307,21 +319,35 @@ namespace OmniBattery.UI
                 int fill = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
                 Rectangle barFill = new Rectangle(barX, barY, fill, barH);
                 using (GraphicsPath fp = RoundedRect(barFill, 5))
-                using (SolidBrush fb = new SolidBrush(effectiveColor))
-                    g.FillPath(fb, fp);
+                {
+                    using (SolidBrush fb = new SolidBrush(effectiveColor))
+                        g.FillPath(fb, fp);
+
+                    // Upper gloss shine
+                    Rectangle barShine = new Rectangle(barX, barY, fill, 4);
+                    using (LinearGradientBrush sb = new LinearGradientBrush(barShine, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(10, 255, 255, 255), 90f))
+                    {
+                        g.FillRectangle(sb, barShine);
+                    }
+                }
             }
 
             // ── Bottom info ──────────────────────────────────────────────────
             string info;
             if (!isConn)
             {
-                info = "Dispositivo desligado  •  Oculto da barra de tarefas";
+                info = I18n.T("DisconnectedStatus");
             }
             else
             {
+                string sub = (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio")
+                    ? I18n.T("WirelessSubtitle")
+                    : _device.Subtitle;
+
+                string updatedText = I18n.T("UpdatedAgo", _device.LastUpdated);
                 info = _device.Voltage > 0
-                    ? string.Format("Tensao: {0:F2}V  •  {1}  •  {2:HH:mm:ss}", _device.Voltage, _device.Subtitle, _device.LastUpdated)
-                    : string.Format("{0}  •  Atualizado as {1:HH:mm:ss}", _device.Subtitle, _device.LastUpdated);
+                    ? string.Format("{0}  •  {1}  •  {2}", I18n.T("VoltageLabel", _device.Voltage), sub, updatedText)
+                    : string.Format("{0}  •  {1}", sub, updatedText);
             }
 
             using (Font inf = new Font("Segoe UI", 7.5f))
@@ -333,38 +359,51 @@ namespace OmniBattery.UI
 
         private void DrawSmallButton(Graphics g, Rectangle r, string label, bool hovered, Color accent, bool showDot)
         {
-            using (GraphicsPath p = RoundedRect(r, 4))
+            using (GraphicsPath p = RoundedRect(r, 6))
             {
-                Color bg = hovered ? Color.FromArgb(60, 65, 100) : Color.FromArgb(38, 42, 65);
-                using (SolidBrush b = new SolidBrush(bg)) g.FillPath(b, p);
-                using (Pen pen = new Pen(Color.FromArgb(80, 85, 120), 1f)) g.DrawPath(pen, p);
+                Color bgTop = hovered ? Color.FromArgb(65, 72, 110) : Color.FromArgb(40, 45, 70);
+                Color bgBottom = hovered ? Color.FromArgb(50, 56, 88) : Color.FromArgb(32, 36, 56);
+                using (LinearGradientBrush b = new LinearGradientBrush(r, bgTop, bgBottom, 90f))
+                    g.FillPath(b, p);
+
+                using (Pen pen = new Pen(Color.FromArgb(hovered ? 130 : 65, 255, 255, 255), 1f))
+                    g.DrawPath(pen, p);
             }
 
             if (showDot)
             {
                 using (SolidBrush db = new SolidBrush(accent))
-                    g.FillEllipse(db, r.X + 5, r.Y + 5, 8, 8);
+                    g.FillEllipse(db, r.X + 6, r.Y + 6, 8, 8);
 
-                using (Font bf = new Font("Segoe UI", 7.2f))
-                    g.DrawString(label, bf, Brushes.White, r.X + 16, r.Y + 3);
+                using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
+                    g.DrawString(label, bf, Brushes.White, r.X + 17, r.Y + 3);
             }
             else
             {
-                using (Font bf = new Font("Segoe UI", 7.2f))
-                    g.DrawString(label, bf, Brushes.White, r.X + 7, r.Y + 3);
+                using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
+                    g.DrawString(label, bf, Brushes.White, r.X + 8, r.Y + 3);
             }
         }
 
         private void DrawStatusButton(Graphics g, Rectangle r, string label, bool hovered, Color statusColor, bool isConnected)
         {
-            using (GraphicsPath p = RoundedRect(r, 4))
+            using (GraphicsPath p = RoundedRect(r, 6))
             {
-                Color bg = isConnected
-                    ? (hovered ? Color.FromArgb(30, 60, 45) : Color.FromArgb(22, 42, 35))
-                    : (hovered ? Color.FromArgb(50, 52, 68) : Color.FromArgb(35, 38, 52));
-                using (SolidBrush b = new SolidBrush(bg)) g.FillPath(b, p);
-                Color borderC = isConnected ? Color.FromArgb(46, 204, 113) : Color.FromArgb(90, 95, 125);
-                using (Pen pen = new Pen(hovered ? Color.White : borderC, 1f)) g.DrawPath(pen, p);
+                Color bgTop = isConnected
+                    ? (hovered ? Color.FromArgb(35, 75, 55) : Color.FromArgb(24, 52, 40))
+                    : (hovered ? Color.FromArgb(55, 60, 80) : Color.FromArgb(38, 42, 60));
+                Color bgBottom = isConnected
+                    ? (hovered ? Color.FromArgb(22, 50, 36) : Color.FromArgb(16, 36, 28))
+                    : (hovered ? Color.FromArgb(42, 46, 64) : Color.FromArgb(28, 31, 46));
+
+                using (LinearGradientBrush b = new LinearGradientBrush(r, bgTop, bgBottom, 90f))
+                    g.FillPath(b, p);
+
+                Color borderC = isConnected
+                    ? Color.FromArgb(hovered ? 240 : 160, 46, 204, 113)
+                    : Color.FromArgb(hovered ? 150 : 80, 255, 255, 255);
+                using (Pen pen = new Pen(borderC, 1f))
+                    g.DrawPath(pen, p);
             }
 
             using (Font f = new Font("Segoe UI", 7.5f, FontStyle.Bold))
