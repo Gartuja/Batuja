@@ -84,7 +84,7 @@ namespace OmniBattery.UI
         private void BuildContextMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            menu.Renderer = new DarkToolStripRenderer();
 
             ToolStripMenuItem itemOrient = new ToolStripMenuItem("Alternar Orientação (Horizontal / Vertical)");
             itemOrient.Click += delegate
@@ -505,19 +505,6 @@ namespace OmniBattery.UI
             path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
-        }
-
-        private class DarkColorTable : ProfessionalColorTable
-        {
-            public override Color MenuItemSelected { get { return Color.FromArgb(50, 54, 80); } }
-            public override Color ToolStripDropDownBackground { get { return Color.FromArgb(24, 27, 40); } }
-            public override Color ImageMarginGradientBegin { get { return Color.FromArgb(24, 27, 40); } }
-            public override Color ImageMarginGradientMiddle { get { return Color.FromArgb(24, 27, 40); } }
-            public override Color ImageMarginGradientEnd { get { return Color.FromArgb(24, 27, 40); } }
-            public override Color MenuBorder { get { return Color.FromArgb(55, 60, 90); } }
-            public override Color MenuItemBorder { get { return Color.FromArgb(88, 101, 242); } }
-            public override Color SeparatorDark { get { return Color.FromArgb(45, 50, 75); } }
-            public override Color SeparatorLight { get { return Color.Transparent; } }
         }
     }
 }

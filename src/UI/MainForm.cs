@@ -25,7 +25,6 @@ namespace OmniBattery.UI
 
         private Panel _emptyPanel;
         private Label _lblDeviceCount;
-        private Label _lblSubtitle;
         private Label _lblStatus;
         private Button _btnRefresh;
         private Button _btnSettings;
@@ -112,43 +111,31 @@ namespace OmniBattery.UI
 
             PictureBox pbLogo = new PictureBox
             {
-                Size = new Size(26, 26),
-                Location = new Point(14, 13),
+                Size = new Size(28, 28),
+                Location = new Point(14, 16),
                 BackColor = Color.Transparent,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
-            try { pbLogo.Image = AppIconRenderer.Render(52); } catch { }
+            try { pbLogo.Image = AppIconRenderer.Render(56); } catch { }
             _headerPanel.Controls.Add(pbLogo);
 
             Label lblTitle = new Label
             {
                 Text = "Batuja",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 15f, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Location = new Point(42, 12)
+                Location = new Point(46, 16)
             };
             _headerPanel.Controls.Add(lblTitle);
-
-            _lblSubtitle = new Label
-            {
-                Text = "MCHOSE V9 Turbo • Attack Shark RS6 Ultra • VK 87 Max V2 • Logitech • XInput • Bluetooth",
-                Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(140, 145, 175),
-                AutoSize = false,
-                AutoEllipsis = true,
-                Size = new Size(600, 16),
-                Location = new Point(18, 42)
-            };
-            _headerPanel.Controls.Add(_lblSubtitle);
 
             _lblDeviceCount = new Label
             {
                 Text = "Varrendo...",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(88, 101, 242),
                 AutoSize = true,
-                Location = new Point(lblTitle.Left + lblTitle.PreferredWidth + 8, 19)
+                Location = new Point(lblTitle.Left + lblTitle.PreferredWidth + 10, 23)
             };
             _headerPanel.Controls.Add(_lblDeviceCount);
 
@@ -271,7 +258,7 @@ namespace OmniBattery.UI
             if (WindowState == FormWindowState.Minimized)
                 return;
 
-            const int HEADER_H = 75;
+            const int HEADER_H = 64;
             const int FOOTER_H = 36;
             int cw = ClientSize.Width;
             int ch = ClientSize.Height;
@@ -287,14 +274,7 @@ namespace OmniBattery.UI
             {
                 if (btn == null) continue;
                 btnX -= btn.Width + 6;
-                btn.Location = new Point(btnX, 18);
-            }
-
-            // Subtitle stops before the button group (ellipsis when narrow)
-            if (_lblSubtitle != null)
-            {
-                int maxW = btnX - _lblSubtitle.Left - 12;
-                _lblSubtitle.Width = Math.Max(40, Math.Min(_lblSubtitle.PreferredWidth, maxW));
+                btn.Location = new Point(btnX, 16);
             }
 
             // Footer: full bottom
@@ -410,7 +390,7 @@ namespace OmniBattery.UI
         private void OnBackgroundButtonClick(object sender, EventArgs e)
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            menu.Renderer = new DarkToolStripRenderer();
 
             ToolStripMenuItem itemChoose = new ToolStripMenuItem("Escolher Imagem (PNG, JPG, GIF, BMP)...");
             itemChoose.Click += delegate
@@ -759,19 +739,6 @@ namespace OmniBattery.UI
             {
                 ImageAnimator.StopAnimate(_bgImage, OnFrameChanged);
             }
-        }
-
-        // ─────────────────────────── DarkColorTable ────────────────────────────
-        private class DarkColorTable : ProfessionalColorTable
-        {
-            public override Color MenuItemSelected { get { return Color.FromArgb(45, 49, 72); } }
-            public override Color MenuBorder { get { return Color.FromArgb(50, 54, 80); } }
-            public override Color MenuItemBorder { get { return Color.FromArgb(88, 101, 242); } }
-            public override Color ToolStripDropDownBackground { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientBegin { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientMiddle { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientEnd { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color SeparatorDark { get { return Color.FromArgb(45, 49, 72); } }
         }
 
         // ─────────────────── BgScrollPanel ────────────────────────────────────

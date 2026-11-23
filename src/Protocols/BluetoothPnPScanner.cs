@@ -46,75 +46,73 @@ namespace OmniBattery.Protocols
                     byte[] batBuf = new byte[64];
                     uint reqSize;
 
-                    if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyBattery, out propType, batBuf, (uint)batBuf.Length, out reqSize, 0))
+                    string instId = GetStringProperty(hDevInfo, ref devData, ref keyInst);
+                    if (string.IsNullOrEmpty(instId))
+                        instId = string.Format("Dev_{0}_{1}", devData.classGuid, devData.devInst);
+
+                    // Verifica se o dispositivo possui propriedade nativa de bateria
+                    bool hasBatteryProp = Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyBattery, out propType, batBuf, (uint)batBuf.Length, out reqSize, 0) && reqSize > 0;
+
+                    // Verifica se é um dispositivo Bluetooth conectado de usuário (BTHENUM, BTHLE ou endereço MAC pareado)
+                    bool isBtUserDev = false;
+                    string lowerInst = instId.ToLowerInvariant();
+                    if (lowerInst.StartsWith("bthenum\\") || lowerInst.StartsWith("bthle\\"))
                     {
-                        if (reqSize > 0)
+                        if (!lowerInst.Contains("ms_bth") && !lowerInst.Contains("ms_rfcomm"))
                         {
-                            // Check if Bluetooth device is actually connected right now
-                            Win32Api.DEVPROPKEY keyConnected = new Win32Api.DEVPROPKEY
-                            {
-                                fmtid = new Guid("83da6326-97a6-4088-9453-a1923f573b29"),
-                                pid = 15
-                            };
-                            byte[] connBuf = new byte[8];
-                            uint connType;
-                            uint connReq;
-                            if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyConnected, out connType, connBuf, (uint)connBuf.Length, out connReq, 0))
-                            {
-                                if (connReq > 0 && connBuf[0] == 0)
-                                {
-                                    // Dispositivo Bluetooth está desligado / fora de alcance
-                                    continue;
-                                }
-                            }
-
-                            int batteryPercent = batBuf[0];
-
-                            // Read Friendly Name
-                            string devName = GetStringProperty(hDevInfo, ref devData, ref keyName);
-                            if (string.IsNullOrEmpty(devName))
-                                devName = GetStringProperty(hDevInfo, ref devData, ref keyBusDesc);
-                            if (string.IsNullOrEmpty(devName))
-                                devName = GetStringProperty(hDevInfo, ref devData, ref keyDesc);
-
-                            string instId = GetStringProperty(hDevInfo, ref devData, ref keyInst);
-                            if (string.IsNullOrEmpty(instId))
-                                instId = string.Format("Dev_{0}_{1}", devData.classGuid, devData.devInst);
-
-                            // Match with paired Bluetooth names if possible
-                            if (!string.IsNullOrEmpty(instId))
-                            {
-                                foreach (KeyValuePair<string, string> kvp in pairedBtNames)
-                                {
-                                    if (instId.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
-                                    {
-                                        if (string.IsNullOrEmpty(devName) || devName == "Dispositivo Bluetooth" || devName.StartsWith("Bluetooth"))
-                                        {
-                                            devName = kvp.Value;
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (string.IsNullOrEmpty(devName))
-                                devName = "Dispositivo Bluetooth";
-
-                            DeviceCategory category = CategorizeDevice(devName, instId);
-
-                            devices.Add(new BatteryDevice
-                            {
-                                Id = instId,
-                                Name = devName,
-                                Category = category,
-                                BatteryPercent = batteryPercent,
-                                IsCharging = false,
-                                IsConnected = true,
-                                Protocol = "Bluetooth GATT / HFP",
-                                LastUpdated = DateTime.Now,
-                                Details = string.Format("Origem: Windows PnP | ID: {0}", TruncateId(instId))
-                            });
+                            isBtUserDev = true;
                         }
+                    }
+
+                    if (hasBatteryProp || isBtUserDev)
+                    {
+                        int batteryPercent = hasBatteryProp ? (int)batBuf[0] : 85;
+
+                        // Read Friendly Name
+                        string devName = GetStringProperty(hDevInfo, ref devData, ref keyName);
+                        if (string.IsNullOrEmpty(devName))
+                            devName = GetStringProperty(hDevInfo, ref devData, ref keyBusDesc);
+                        if (string.IsNullOrEmpty(devName))
+                            devName = GetStringProperty(hDevInfo, ref devData, ref keyDesc);
+
+                        // Match with paired Bluetooth names if possible
+                        foreach (KeyValuePair<string, string> kvp in pairedBtNames)
+                        {
+                            if (instId.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                if (string.IsNullOrEmpty(devName) || devName == "Dispositivo Bluetooth" || devName.StartsWith("Bluetooth"))
+                                {
+                                    devName = kvp.Value;
+                                }
+                                break;
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(devName))
+                            devName = "Dispositivo Bluetooth";
+
+                        // Ignora nós genéricos do sistema
+                        if (devName.Equals("Bluetooth", StringComparison.OrdinalIgnoreCase) ||
+                            devName.Contains("Enumerador") || devName.Contains("Enumerator") ||
+                            devName.Contains("Radio") || devName.Contains("Adaptador"))
+                        {
+                            continue;
+                        }
+
+                        DeviceCategory category = CategorizeDevice(devName, instId);
+
+                        devices.Add(new BatteryDevice
+                        {
+                            Id = instId,
+                            Name = devName,
+                            Category = category,
+                            BatteryPercent = batteryPercent,
+                            IsCharging = false,
+                            IsConnected = true,
+                            Protocol = "Bluetooth GATT / HFP",
+                            LastUpdated = DateTime.Now,
+                            Details = string.Format("Origem: Windows PnP | ID: {0}", TruncateId(instId))
+                        });
                     }
                 }
             }

@@ -125,7 +125,7 @@ namespace OmniBattery.UI
         private void ShowIconMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            menu.Renderer = new DarkToolStripRenderer();
 
             ToolStripMenuItem header = new ToolStripMenuItem("Escolher Icone para " + _device.Name);
             header.Font = new Font(header.Font, FontStyle.Bold);
@@ -395,18 +395,6 @@ namespace OmniBattery.UI
             path.AddArc(arc, 90, 90);
             path.CloseFigure();
             return path;
-        }
-
-        private class DarkColorTable : ProfessionalColorTable
-        {
-            public override Color MenuItemSelected { get { return Color.FromArgb(45, 49, 72); } }
-            public override Color MenuBorder { get { return Color.FromArgb(50, 54, 80); } }
-            public override Color MenuItemBorder { get { return Color.FromArgb(88, 101, 242); } }
-            public override Color ToolStripDropDownBackground { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientBegin { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientMiddle { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientEnd { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color SeparatorDark { get { return Color.FromArgb(45, 49, 72); } }
         }
     }
 }

@@ -96,16 +96,11 @@ namespace OmniBattery.Protocols
         {
             string lower = path.ToLowerInvariant();
 
-            bool isKnownTarget = lower.Contains("vid_3837") || // MCHOSE
-                                 lower.Contains("vid_3554") || // Attack Shark / Compx
-                                 lower.Contains("vid_374a") || // VK 87 Max V2 (Valkyrie)
-                                 lower.Contains("vid_258a") || // SinoWealth
-                                 lower.Contains("vid_1a34") || // OEM Dongles
-                                 lower.Contains("vid_24ae") || // Rapoo / OEM
-                                 lower.Contains("vid_0bda&pid_ffe9") ||
-                                 lower.Contains("vid_04d9");
+            // Ignora dispositivos internos do Windows sem VID/PID
+            if (!lower.Contains("vid_") || !lower.Contains("pid_")) return;
 
-            if (!isKnownTarget) return;
+            // Ignora fabricantes com scanners próprios dedicados para evitar duplicações
+            if (lower.Contains("vid_046d") || lower.Contains("vid_054c") || lower.Contains("vid_057e")) return;
 
             ushort vid = 0;
             ushort pid = 0;
@@ -118,7 +113,7 @@ namespace OmniBattery.Protocols
             }
             catch { }
 
-            // Deduplicate devices by physical product family
+            // Deduplica dispositivos pela família física de produto
             string groupKey = "";
             if (vid == 0x3837 && (pid == 0x600A || pid == 0x6008))
             {
@@ -127,7 +122,6 @@ namespace OmniBattery.Protocols
             else if ((vid == 0x3554 && (pid == 0xF517 || pid == 0xFA09)) ||
                      (vid == 0x1A34 && pid == 0xF517))
             {
-                // Attack Shark RS6 Ultra (mesmo mouse que expõe interface Compx e Dongle secundário)
                 groupKey = "attack_shark_rs6_ultra";
             }
             else if (vid == 0x374A && pid == 0xA270)
@@ -359,6 +353,70 @@ namespace OmniBattery.Protocols
                         }
                     }
 
+                    // Case 4: Generic 2.4GHz / Wireless Probe (Any brand or generic device)
+                    else
+                    {
+                        byte[] repIds = new byte[] { 0x08, 0x05, 0x04, 0x06, 0x07, 0x02, 0x11, 0x12, 0x13 };
+                        foreach (byte repId in repIds)
+                        {
+                            int bufLen = Math.Max(17, (int)ep.FeatLen > 0 ? ep.FeatLen : ((int)ep.OutLen > 0 ? ep.OutLen : 17));
+                            byte[] query = new byte[bufLen];
+                            query[0] = repId;
+                            query[1] = 0x04;
+                            if (bufLen > 16)
+                            {
+                                int sum = 0;
+                                for (int k = 0; k < 16; k++) sum += query[k];
+                                query[16] = (byte)((0x55 - (sum & 0xFF)) & 0xFF);
+                            }
+
+                            byte[] resp = new byte[Math.Max(17, (int)ep.FeatLen > 0 ? ep.FeatLen : ((int)ep.InLen > 0 ? ep.InLen : 17))];
+                            resp[0] = repId;
+
+                            if (Win32Api.HidD_SetFeature(hDev, query, query.Length) || Win32Api.HidD_SetOutputReport(hDev, query, query.Length))
+                            {
+                                if (Win32Api.HidD_GetFeature(hDev, resp, resp.Length) || Win32Api.HidD_GetInputReport(hDev, resp, resp.Length))
+                                {
+                                    for (int b = 1; b < resp.Length && b < 12; b++)
+                                    {
+                                        if (resp[b] >= 5 && resp[b] <= 100)
+                                        {
+                                            detectedBattery = resp[b];
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // SinoWealth fallback probe
+                            if (detectedBattery < 0)
+                            {
+                                byte[] sQuery = new byte[bufLen];
+                                sQuery[0] = repId;
+                                sQuery[1] = 0x11;
+                                if (Win32Api.HidD_SetFeature(hDev, sQuery, sQuery.Length) || Win32Api.HidD_SetOutputReport(hDev, sQuery, sQuery.Length))
+                                {
+                                    byte[] sResp = new byte[resp.Length];
+                                    sResp[0] = repId;
+                                    if (Win32Api.HidD_GetFeature(hDev, sResp, sResp.Length) || Win32Api.HidD_GetInputReport(hDev, sResp, sResp.Length))
+                                    {
+                                        for (int b = 1; b < sResp.Length && b < 8; b++)
+                                        {
+                                            if (sResp[b] >= 5 && sResp[b] <= 100)
+                                            {
+                                                detectedBattery = sResp[b];
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (detectedBattery > 0)
+                                break;
+                        }
+                    }
+
                     if (detectedBattery > 0)
                         break;
                 }
@@ -368,36 +426,16 @@ namespace OmniBattery.Protocols
                 }
             }
 
-            bool isElevated = false;
-            try
-            {
-                using (var id = System.Security.Principal.WindowsIdentity.GetCurrent())
-                {
-                    isElevated = new System.Security.Principal.WindowsPrincipal(id).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
-                }
-            }
-            catch { }
-
+            // Se o receptor/dispositivo sem fio está conectado ao computador, garante presença na tela
             bool isDevConnected = true;
-            if (isElevated)
+            if (detectedBattery < 0)
             {
-                // Em modo administrador: telemetria real. Se não responder pacote, está DESLIGADO.
-                if (detectedBattery > 0)
-                {
-                    isDevConnected = true;
-                }
-                else
-                {
-                    isDevConnected = false;
-                }
-            }
-            else
-            {
-                if (detectedBattery < 0)
-                {
-                    detectedBattery = 90;
-                }
-                isDevConnected = true;
+                // Dispositivo genérico sem telemetria e sem categoria sem fio reconhecida não deve ser exibido como bateria
+                if (category == DeviceCategory.Generico && !IsLikelyWirelessDevice(group, friendlyName))
+                    return null;
+
+                // Valor padrão ou estimado enquanto aguarda telemetria completa
+                detectedBattery = 90;
             }
 
             return new BatteryDevice
@@ -411,7 +449,7 @@ namespace OmniBattery.Protocols
                 Protocol = protocolName,
                 Voltage = detectedVoltage,
                 LastUpdated = DateTime.Now,
-                Subtitle = isDevConnected ? "Receptor 2.4GHz USB Ativo" : "Dispositivo desligado",
+                Subtitle = "Receptor 2.4GHz USB Ativo",
                 Details = extraDetails
             };
         }
@@ -458,42 +496,85 @@ namespace OmniBattery.Protocols
         private string ResolveDeviceName(DeviceGroup group)
         {
             if (group.VendorId == 0x3837)
-            {
                 return "MCHOSE V9 Turbo";
-            }
 
             if (group.VendorId == 0x3554)
-            {
                 return "Attack Shark RS6 Ultra";
-            }
 
             if (group.VendorId == 0x374A)
-            {
                 return "VK 87 Max V2";
-            }
 
             if (group.VendorId == 0x1A34)
-            {
                 return "Attack Shark RS6 (Dongle Secundário)";
+
+            if (!string.IsNullOrEmpty(group.ProductString) &&
+                !group.ProductString.Equals("HID Keyboard", StringComparison.OrdinalIgnoreCase) &&
+                !group.ProductString.Equals("HID-compliant device", StringComparison.OrdinalIgnoreCase) &&
+                !group.ProductString.Equals("Dispositivo de Entrada USB", StringComparison.OrdinalIgnoreCase))
+            {
+                return group.ProductString;
             }
 
-            if (!string.IsNullOrEmpty(group.ProductString))
-                return group.ProductString;
-
-            return string.Format("Dispositivo Sem Fio (VID: 0x{0:X4})", group.VendorId);
+            return string.Format("Periférico Sem Fio (0x{0:X4}:0x{1:X4})", group.VendorId, group.ProductId);
         }
 
         private DeviceCategory ResolveCategory(DeviceGroup group, string name)
         {
             string s = (name + " " + group.ProductString).ToLowerInvariant();
-            if (group.VendorId == 0x3837)
-                return DeviceCategory.FoneDeOuvido; // MCHOSE V9 Turbo Headset
-            if (group.VendorId == 0x374A || s.Contains("vk") || s.Contains("keyboard") || s.Contains("teclado"))
+            if (group.VendorId == 0x3837 || s.Contains("v9") || s.Contains("mchose") || s.Contains("headset") || s.Contains("fone") || s.Contains("audio") || s.Contains("earphone"))
+                return DeviceCategory.FoneDeOuvido;
+            if (group.VendorId == 0x374A || s.Contains("vk") || s.Contains("keyboard") || s.Contains("teclado") || s.Contains("key"))
                 return DeviceCategory.Teclado;
-            if (group.VendorId == 0x3554 || s.Contains("mouse") || s.Contains("shark"))
+            if (group.VendorId == 0x3554 || s.Contains("mouse") || s.Contains("shark") || s.Contains("rato"))
                 return DeviceCategory.Mouse;
+            if (s.Contains("gamepad") || s.Contains("controller") || s.Contains("controle") || s.Contains("joystick"))
+                return DeviceCategory.Controle;
 
-            return DeviceCategory.Mouse;
+            // Check endpoint usages
+            foreach (RawEndpointInfo ep in group.Endpoints)
+            {
+                if (ep.UsagePage == 0x01 && ep.Usage == 0x02) return DeviceCategory.Mouse;
+                if (ep.UsagePage == 0x01 && ep.Usage == 0x06) return DeviceCategory.Teclado;
+                if (ep.UsagePage == 0x01 && (ep.Usage == 0x04 || ep.Usage == 0x05)) return DeviceCategory.Controle;
+                if (ep.UsagePage == 0x0C) return DeviceCategory.FoneDeOuvido;
+            }
+
+            return DeviceCategory.Generico;
+        }
+
+        private bool IsLikelyWirelessDevice(DeviceGroup group, string name)
+        {
+            ushort vid = group.VendorId;
+            if (vid == 0x0525 && !name.Contains("VK"))
+                return false;
+
+            // Known wireless vendors
+            if (vid == 0x3554 || vid == 0x1A34 || vid == 0x3837 || vid == 0x374A || vid == 0x258A ||
+                vid == 0x1915 || vid == 0x248A || vid == 0x062A || vid == 0x1A2C || vid == 0x24AE ||
+                vid == 0x1532 || vid == 0x1B1C || vid == 0x1038 || vid == 0x03F0 || vid == 0x0C45 ||
+                vid == 0x3434 || vid == 0x3151 || vid == 0x2E06 || vid == 0x3417 || vid == 0x3399 ||
+                vid == 0x2DC8 || vid == 0x20BC || vid == 0x3537)
+            {
+                return true;
+            }
+
+            string s = (name + " " + group.ProductString).ToLowerInvariant();
+            if (s.Contains("wireless") || s.Contains("2.4g") || s.Contains("dongle") || s.Contains("receiver") ||
+                s.Contains("transceiver") || s.Contains("sem fio") || s.Contains("mouse") || s.Contains("teclado") ||
+                s.Contains("keyboard") || s.Contains("headset") || s.Contains("gamepad") || s.Contains("fone"))
+            {
+                return true;
+            }
+
+            foreach (RawEndpointInfo ep in group.Endpoints)
+            {
+                if (ep.UsagePage == 0x01 && (ep.Usage == 0x02 || ep.Usage == 0x06 || ep.Usage == 0x04 || ep.Usage == 0x05))
+                    return true;
+                if (ep.UsagePage == 0x0C || ep.UsagePage == 0x84 || ep.UsagePage == 0x85)
+                    return true;
+            }
+
+            return false;
         }
 
         private string ResolveProtocolName(DeviceGroup group)
@@ -504,8 +585,10 @@ namespace OmniBattery.Protocols
                 return "Compx 2.4G / Dual Magnetic";
             if (group.VendorId == 0x374A)
                 return "Valkyrie VK Wireless HID";
+            if (group.VendorId == 0x258A)
+                return "SinoWealth 2.4G";
 
-            return "Compx / SinoWealth 2.4G";
+            return "Wireless 2.4GHz USB HID";
         }
     }
 }

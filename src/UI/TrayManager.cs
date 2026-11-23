@@ -40,7 +40,7 @@ namespace OmniBattery.UI
         private ContextMenuStrip BuildDefaultContextMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            menu.Renderer = new DarkToolStripRenderer();
 
             ToolStripMenuItem itemOpen = new ToolStripMenuItem("Abrir Painel");
             itemOpen.Font = new Font(itemOpen.Font, FontStyle.Bold);
@@ -155,7 +155,7 @@ namespace OmniBattery.UI
         private ContextMenuStrip BuildDeviceContextMenu(BatteryDevice dev)
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            menu.Renderer = new DarkToolStripRenderer();
 
             ToolStripMenuItem headerItem = new ToolStripMenuItem(dev.Name);
             headerItem.Font = new Font(headerItem.Font, FontStyle.Bold);
@@ -516,18 +516,6 @@ namespace OmniBattery.UI
                 _defaultIcon.Dispose();
                 _defaultIcon = null;
             }
-        }
-
-        private class DarkColorTable : ProfessionalColorTable
-        {
-            public override Color MenuItemSelected { get { return Color.FromArgb(45, 49, 72); } }
-            public override Color MenuBorder { get { return Color.FromArgb(50, 54, 80); } }
-            public override Color MenuItemBorder { get { return Color.FromArgb(88, 101, 242); } }
-            public override Color ToolStripDropDownBackground { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientBegin { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientMiddle { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color ImageMarginGradientEnd { get { return Color.FromArgb(28, 31, 46); } }
-            public override Color SeparatorDark { get { return Color.FromArgb(45, 49, 72); } }
         }
     }
 }
