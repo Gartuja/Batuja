@@ -339,13 +339,25 @@ namespace OmniBattery.UI
                     // Segmented Battery (image 2 reference)
                     int batX = curX + 46;
                     int batY = 16;
-                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 48, 20), dev.BatteryPercent, dev.IsCharging, effCol, dev.IsWired);
 
-                    // Percentage
-                    using (Font pf = new Font("Segoe UI", 12f, FontStyle.Bold))
+                    if (dev.IsWired)
                     {
-                        string pct = dev.IsWired ? "USB" : (dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--");
-                        g.DrawString(pct, pf, new SolidBrush(effCol), batX + 54, batY - 1);
+                        using (Font pf = new Font("Segoe UI", 9f, FontStyle.Bold))
+                        {
+                            g.DrawString("⚡ " + I18n.T("WiredBadge"), pf, new SolidBrush(Color.FromArgb(120, 190, 240)), batX, batY + 2);
+                        }
+                    }
+                    else
+                    {
+                        // Segmented Battery (image 2 reference)
+                        DrawSegmentedBattery(g, new Rectangle(batX, batY, 48, 20), dev.BatteryPercent, dev.IsCharging, effCol, false);
+
+                        // Percentage
+                        using (Font pf = new Font("Segoe UI", 12f, FontStyle.Bold))
+                        {
+                            string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                            g.DrawString(pct, pf, new SolidBrush(effCol), batX + 54, batY - 1);
+                        }
                     }
 
                     // Short Name
@@ -389,16 +401,27 @@ namespace OmniBattery.UI
                     using (Pen ip = new Pen(Color.FromArgb(140, effCol), 1.2f)) g.DrawEllipse(ip, iconRect);
                     IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
 
-                    // Segmented Battery
+                    // Segmented Battery or Wired Notice
                     int batX = 58;
                     int batY = curY + 7;
-                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 44, 18), dev.BatteryPercent, dev.IsCharging, effCol, dev.IsWired);
 
-                    // Percentage
-                    using (Font pf = new Font("Segoe UI", 11f, FontStyle.Bold))
+                    if (dev.IsWired)
                     {
-                        string pct = dev.IsWired ? "USB" : (dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--");
-                        g.DrawString(pct, pf, new SolidBrush(effCol), batX + 49, batY - 1);
+                        using (Font pf = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+                        {
+                            g.DrawString("⚡ " + I18n.T("WiredBadge"), pf, new SolidBrush(Color.FromArgb(120, 190, 240)), batX, batY + 1);
+                        }
+                    }
+                    else
+                    {
+                        DrawSegmentedBattery(g, new Rectangle(batX, batY, 44, 18), dev.BatteryPercent, dev.IsCharging, effCol, false);
+
+                        // Percentage
+                        using (Font pf = new Font("Segoe UI", 11f, FontStyle.Bold))
+                        {
+                            string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                            g.DrawString(pct, pf, new SolidBrush(effCol), batX + 49, batY - 1);
+                        }
                     }
 
                     // Short Name

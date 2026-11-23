@@ -296,48 +296,53 @@ namespace OmniBattery.UI
             DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
             // ── Percentage / Status ──────────────────────────────────────────
-            string pct = _device.IsWired ? I18n.T("WiredUsbBadge") : _device.GetFormattedPercentage();
-            using (Font pctF = new Font("Segoe UI", isConn ? 17f : 14f, FontStyle.Bold))
+            // Se for com fio, NÃO mostra porcentagem de bateria
+            string pct = _device.IsWired ? "" : _device.GetFormattedPercentage();
+            if (!string.IsNullOrEmpty(pct))
             {
-                SizeF pctSz = g.MeasureString(pct, pctF);
-                float pctX = Width - pctSz.Width - 14;
-                float pctY = isConn ? 64f : 67f;
-                g.DrawString(pct, pctF, new SolidBrush(effectiveColor), pctX, pctY);
+                using (Font pctF = new Font("Segoe UI", isConn ? 17f : 14f, FontStyle.Bold))
+                {
+                    SizeF pctSz = g.MeasureString(pct, pctF);
+                    float pctX = Width - pctSz.Width - 14;
+                    float pctY = isConn ? 64f : 67f;
+                    g.DrawString(pct, pctF, new SolidBrush(effectiveColor), pctX, pctY);
+                }
             }
 
-            // ── Battery bar (Glossy AeroGlass tube) ───────────────────────────
+            // ── Battery bar (Glossy AeroGlass tube) ou aviso de dispositivo com fio ────
             int barX = 14, barY = 82;
             int barW = Width - 120, barH = 10;
             Rectangle barBg = new Rectangle(barX, barY, barW, barH);
 
-            using (GraphicsPath bgP = RoundedRect(barBg, 5))
-            using (SolidBrush bgB = new SolidBrush(isConn ? Color.FromArgb(42, 46, 68) : Color.FromArgb(28, 30, 44)))
-                g.FillPath(bgB, bgP);
-
-            if (isConn && (_device.IsWired || _device.BatteryPercent > 0))
+            if (_device.IsWired)
             {
-                int fill = _device.IsWired
-                    ? barW
-                    : Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
-                Rectangle barFill = new Rectangle(barX, barY, fill, barH);
-                using (GraphicsPath fp = RoundedRect(barFill, 5))
+                // Dispositivo com fio: avisa claramente que é com fio e sem bateria
+                using (Font wf = new Font("Segoe UI", 8.2f, FontStyle.Bold))
                 {
-                    if (_device.IsWired)
-                    {
-                        using (LinearGradientBrush usbB = new LinearGradientBrush(barFill, Color.FromArgb(0, 205, 255), Color.FromArgb(0, 140, 240), 0f))
-                            g.FillPath(usbB, fp);
-                    }
-                    else
+                    g.DrawString("⚡ " + I18n.T("WiredDeviceNotice"), wf, new SolidBrush(Color.FromArgb(100, 180, 240)), barX, barY - 2);
+                }
+            }
+            else
+            {
+                using (GraphicsPath bgP = RoundedRect(barBg, 5))
+                using (SolidBrush bgB = new SolidBrush(isConn ? Color.FromArgb(42, 46, 68) : Color.FromArgb(28, 30, 44)))
+                    g.FillPath(bgB, bgP);
+
+                if (isConn && _device.BatteryPercent > 0)
+                {
+                    int fill = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
+                    Rectangle barFill = new Rectangle(barX, barY, fill, barH);
+                    using (GraphicsPath fp = RoundedRect(barFill, 5))
                     {
                         using (SolidBrush fb = new SolidBrush(effectiveColor))
                             g.FillPath(fb, fp);
-                    }
 
-                    // Upper gloss shine
-                    Rectangle barShine = new Rectangle(barX, barY, fill, 4);
-                    using (LinearGradientBrush sb = new LinearGradientBrush(barShine, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(10, 255, 255, 255), 90f))
-                    {
-                        g.FillRectangle(sb, barShine);
+                        // Upper gloss shine
+                        Rectangle barShine = new Rectangle(barX, barY, fill, 4);
+                        using (LinearGradientBrush sb = new LinearGradientBrush(barShine, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(10, 255, 255, 255), 90f))
+                        {
+                            g.FillRectangle(sb, barShine);
+                        }
                     }
                 }
             }
@@ -353,8 +358,8 @@ namespace OmniBattery.UI
                 string sub;
                 if (_device.IsWired)
                     sub = I18n.T("WiredDeviceSubtitle");
-                else if (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio")
-                    sub = I18n.T("WirelessSubtitle");
+                else if (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio" || _device.Subtitle == "Sem Fio")
+                    sub = I18n.T("WirelessDeviceSubtitle");
                 else
                     sub = _device.Subtitle;
 

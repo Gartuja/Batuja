@@ -95,8 +95,8 @@ namespace OmniBattery.UI
 
             foreach (BatteryDevice dev in devices)
             {
-                // Só exibe na barra de tarefas / bandeja os dispositivos que estão LIGADOS e com ÍCONE LIGADO
-                if (!dev.IsConnected || !dev.IsTrayIconEnabled)
+                // Só exibe na barra de tarefas / bandeja os dispositivos que estão LIGADOS, com BATERIA e com ÍCONE LIGADO
+                if (!dev.IsConnected || !dev.IsTrayIconEnabled || dev.IsWired || !dev.HasBattery)
                     continue;
 
                 string key = !string.IsNullOrEmpty(dev.Id) ? dev.Id : dev.Name;
@@ -335,13 +335,8 @@ namespace OmniBattery.UI
                     g.Clear(Color.Transparent);
 
                     string text = "ON";
-                    if (dev != null)
-                    {
-                        if (dev.IsWired)
-                            text = "USB";
-                        else if (dev.BatteryPercent >= 0)
-                            text = dev.BatteryPercent.ToString();
-                    }
+                    if (dev != null && dev.BatteryPercent >= 0)
+                        text = dev.BatteryPercent.ToString();
 
                     Rectangle bgRect = new Rectangle(1, 3, 30, 26);
 

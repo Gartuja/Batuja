@@ -110,9 +110,12 @@ namespace OmniBattery.Core
             Reg("UpdatedAgo", "Atualizado às {0:HH:mm:ss}", "Updated at {0:HH:mm:ss}", "Actualizado a las {0:HH:mm:ss}");
             Reg("UsbActive", "Receptor 2.4GHz USB Ativo", "Active 2.4GHz USB Receiver", "Receptor USB 2.4GHz Activo");
             Reg("BtActive", "Bluetooth Conectado", "Bluetooth Connected", "Bluetooth Conectado");
-            Reg("WirelessSubtitle", "Sem fio", "Wireless", "Inalámbrico");
-            Reg("WiredDeviceSubtitle", "Dispositivo USB (Com Fio)", "Wired USB Device", "Dispositivo USB (Con Cable)");
-            Reg("WiredUsbBadge", "USB", "USB", "USB");
+            Reg("WirelessSubtitle", "Sem Fio", "Wireless", "Inalámbrico");
+            Reg("WirelessDeviceSubtitle", "Dispositivo Sem Fio", "Wireless Device", "Dispositivo Inalámbrico");
+            Reg("WirelessBadge", "Sem Fio", "Wireless", "Inalámbrico");
+            Reg("WiredDeviceSubtitle", "Dispositivo com Fio", "Wired Device", "Dispositivo con Cable");
+            Reg("WiredDeviceNotice", "Dispositivo com Fio (Sem bateria)", "Wired Device (No battery)", "Dispositivo con Cable (Sin batería)");
+            Reg("WiredBadge", "Com Fio", "Wired", "Con Cable");
             Reg("VoltageLabel", "Tensão: {0:F2}V", "Voltage: {0:F2}V", "Voltaje: {0:F2}V");
             Reg("OverlayNoDevices", "Batuja: Nenhum dispositivo sem fio ligado", "Batuja: No wireless devices turned on", "Batuja: Ningún dispositivo inalámbrico encendido");
 

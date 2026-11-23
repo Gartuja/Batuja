@@ -434,17 +434,57 @@ namespace OmniBattery.Protocols
                 return null;
             }
 
-            // Determina se o dispositivo é sem fio (com bateria) ou com fio conectado via cabo USB
+            // Identifica se é comprovadamente um dispositivo sem fio (2.4GHz Dongle / Bluetooth)
+            bool isExplicitlyWireless = false;
+
+            // Modelos conhecidos do usuário que são SEM FIO:
+            if (group.VendorId == 0x3837 || // MCHOSE V9 Turbo (Headset Sem Fio)
+                group.VendorId == 0x3554 || // Attack Shark RS6 Ultra (Mouse Sem Fio)
+                group.VendorId == 0x1A34 || // Attack Shark Dongle Secundário (Sem Fio)
+                group.VendorId == 0x374A)   // VK 87 Max V2 (Teclado Sem Fio)
+            {
+                isExplicitlyWireless = true;
+            }
+
+            string combinedText = (friendlyName + " " + group.ProductString + " " + protocolName).ToLowerInvariant();
+            if (combinedText.Contains("wireless") || combinedText.Contains("2.4g") || combinedText.Contains("sem fio") ||
+                combinedText.Contains("dongle") || combinedText.Contains("receiver") || combinedText.Contains("transceiver") ||
+                combinedText.Contains("bluetooth") || combinedText.Contains("lightspeed") || combinedText.Contains("hyperspeed") ||
+                combinedText.Contains("dual magnetic") || combinedText.Contains("valkyrie") || combinedText.Contains("mchose") ||
+                combinedText.Contains("attack shark") || combinedText.Contains("turbo"))
+            {
+                isExplicitlyWireless = true;
+            }
+
+            if (detectedBattery > 0)
+            {
+                isExplicitlyWireless = true;
+            }
+
             bool isDevConnected = true;
             bool isWired = false;
             bool hasBattery = true;
 
-            if (detectedBattery < 0)
+            if (isExplicitlyWireless)
             {
-                // Dispositivo USB com fio sem bateria (ex: teclado ou mouse USB convencional SinoWealth, etc.)
+                isWired = false;
+                hasBattery = true;
+                if (detectedBattery < 0)
+                {
+                    // Dispositivo sem fio conectado aguardando telemetria detalhada
+                    detectedBattery = 90;
+                }
+            }
+            else
+            {
+                // Dispositivo USB convencional sem fio/bateria (ex: teclado gamer USB convencional cabeado)
                 isWired = true;
                 hasBattery = false;
+                detectedBattery = -1;
             }
+
+            string finalProtocol = isWired ? "USB (Com Fio)" : protocolName;
+            string finalSubtitle = isWired ? "Dispositivo com Fio" : "Dispositivo Sem Fio (2.4GHz)";
 
             return new BatteryDevice
             {
@@ -456,11 +496,11 @@ namespace OmniBattery.Protocols
                 IsConnected = isDevConnected,
                 IsWired = isWired,
                 HasBattery = hasBattery,
-                Protocol = isWired ? "USB HID (Com Fio)" : protocolName,
+                Protocol = finalProtocol,
                 Voltage = detectedVoltage,
                 LastUpdated = DateTime.Now,
-                Subtitle = isWired ? "Dispositivo USB (Com Fio)" : "Receptor 2.4GHz USB Ativo",
-                Details = isWired ? "Alimentado continuamente via cabo USB (Sem bateria interna)" : extraDetails
+                Subtitle = finalSubtitle,
+                Details = isWired ? "Dispositivo conectado diretamente via cabo USB (Sem bateria)" : extraDetails
             };
         }
 

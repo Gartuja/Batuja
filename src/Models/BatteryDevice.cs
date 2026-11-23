@@ -121,8 +121,8 @@ namespace OmniBattery.Models
             if (!IsConnected)
                 return "Desligado";
 
-            if (IsWired)
-                return "USB";
+            if (IsWired || !HasBattery)
+                return "";
 
             if (BatteryPercent < 0)
                 return "Ativo";
