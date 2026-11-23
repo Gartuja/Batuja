@@ -29,11 +29,19 @@ try {
     Write-Host "Aviso: não foi possível gerar app.ico ($($_.Exception.Message))" -ForegroundColor Yellow
 }
 
+$wpfDir = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF"
+if (-not (Test-Path $wpfDir)) {
+    $wpfDir = "C:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF"
+}
+
 $references = @(
     "System.dll",
     "System.Core.dll",
     "System.Drawing.dll",
-    "System.Windows.Forms.dll"
+    "System.Windows.Forms.dll",
+    "$wpfDir\WindowsBase.dll",
+    "$wpfDir\PresentationCore.dll",
+    "$wpfDir\PresentationFramework.dll"
 )
 
 $refArgs = $references | ForEach-Object { "/r:$_" }

@@ -89,14 +89,7 @@ namespace OmniBattery.UI
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
         {
-            if (Parent != null)
-            {
-                InvokePaintBackground(Parent, pevent);
-            }
-            else
-            {
-                base.OnPaintBackground(pevent);
-            }
+            // Evita pintar fundo padrão quadrado ou chamar InvokePaintBackground com coordenadas incorretas
         }
 
         protected override void OnMouseEnter(EventArgs e)
@@ -178,30 +171,23 @@ namespace OmniBattery.UI
                     g.FillPath(bgBrush, path);
                 }
 
-                // 2. Linha de destaque especular de cristal no topo interno
-                int shineAlpha = _isHovered ? 85 : 50;
-                using (Pen topShinePen = new Pen(Color.FromArgb(shineAlpha, 255, 255, 255), 1f))
-                {
-                    g.DrawLine(topShinePen, rect.X + _cornerRadius, rect.Y + 1.2f, rect.Right - _cornerRadius, rect.Y + 1.2f);
-                }
-
-                // 3. Borda de cristal com suporte a cor de destaque
+                // 2. Borda elegante escura translúcida (sem bordas brancas indesejadas)
                 Color borderColor;
                 if (!Enabled)
                 {
-                    borderColor = Color.FromArgb(25, 255, 255, 255);
+                    borderColor = Color.FromArgb(38, 44, 62);
                 }
                 else if (_isHovered)
                 {
                     borderColor = _useAccentBorder
-                        ? Color.FromArgb(240, _accentColor)
-                        : Color.FromArgb(130, 255, 255, 255);
+                        ? Color.FromArgb(220, _accentColor)
+                        : Color.FromArgb(90, 110, 175);
                 }
                 else
                 {
                     borderColor = _useAccentBorder
                         ? Color.FromArgb(160, _accentColor)
-                        : Color.FromArgb(48, 255, 255, 255);
+                        : Color.FromArgb(50, 60, 88);
                 }
 
                 using (Pen borderPen = new Pen(borderColor, 1f))
@@ -209,18 +195,18 @@ namespace OmniBattery.UI
                     g.DrawPath(borderPen, path);
                 }
 
-                // 4. Texto e Ícone Vetorial
+                // 3. Texto e Ícone Vetorial
                 Color textColor = !Enabled ? Color.FromArgb(120, 130, 155) : ForeColor;
                 float offsetY = _isPressed ? 1f : 0f;
 
                 if (_iconType != ButtonIconType.None)
                 {
                     SizeF textSize = g.MeasureString(Text, Font);
-                    float iconDiameter = 13f;
-                    float gap = 7f;
+                    float iconDiameter = 12f;
+                    float gap = 6f;
                     float totalContentWidth = iconDiameter + gap + textSize.Width;
 
-                    float startX = (Width - totalContentWidth) / 2f;
+                    float startX = Math.Max(8f, (Width - totalContentWidth) / 2f);
                     float iconCx = startX + (iconDiameter / 2f);
                     float iconCy = (Height / 2f) + offsetY;
 

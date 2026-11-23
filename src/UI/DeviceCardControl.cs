@@ -265,9 +265,9 @@ namespace OmniBattery.UI
             // ── 4. Botões Superiores Direitos: [● Ícone Ativo] e [✕] ───────────
             int btnY = 16;
             int btnH = 24;
-            int btnStatusW = 112;
-            _btnStatusRect = new Rectangle(Width - btnStatusW - 36, btnY, btnStatusW, btnH);
-            _btnHideRect   = new Rectangle(Width - 26, btnY, 20, btnH);
+            int btnStatusW = 110;
+            _btnStatusRect = new Rectangle(Width - btnStatusW - 32, btnY, btnStatusW, btnH);
+            _btnHideRect   = new Rectangle(Width - 25, btnY, 18, btnH);
 
             bool trayOn = _device.IsTrayIconEnabled;
             string statusLabel = trayOn ? I18n.T("IconOn") : I18n.T("IconOff");
@@ -283,7 +283,7 @@ namespace OmniBattery.UI
 
             // ── 5. Nome do Dispositivo ──────────────────────────────────────────
             int txtLeft = 72;
-            Rectangle nameRect = new Rectangle(txtLeft, 14, Width - txtLeft - btnStatusW - 42, 24);
+            Rectangle nameRect = new Rectangle(txtLeft, 14, Width - txtLeft - btnStatusW - 38, 24);
             using (Font nf = new Font("Segoe UI", 12f, FontStyle.Bold))
             {
                 StringFormat sf = new StringFormat
@@ -302,23 +302,36 @@ namespace OmniBattery.UI
             using (Font pf = new Font("Segoe UI", 7.5f, FontStyle.Bold))
             {
                 SizeF ps = g.MeasureString(proto, pf);
-                Rectangle badge = new Rectangle(curX, 42, (int)ps.Width + 12, 20);
+                int badgeW = Math.Min(145, (int)ps.Width + 12);
+                Rectangle badge = new Rectangle(curX, 42, badgeW, 20);
                 using (GraphicsPath bp = RoundedRect(badge, 6))
                 {
                     using (SolidBrush bb = new SolidBrush(isConn ? Color.FromArgb(34, 38, 58) : Color.FromArgb(25, 27, 40)))
                         g.FillPath(bb, bp);
                     using (Pen bpen = new Pen(Color.FromArgb(55, 62, 92), 1f))
                         g.DrawPath(bpen, bp);
-                    g.DrawString(proto, pf, new SolidBrush(isConn ? Color.FromArgb(185, 195, 225) : Color.FromArgb(120, 125, 150)), curX + 6, 44);
+
+                    StringFormat bsf = new StringFormat
+                    {
+                        Trimming = StringTrimming.EllipsisCharacter,
+                        FormatFlags = StringFormatFlags.NoWrap
+                    };
+                    Rectangle textR = new Rectangle(badge.X + 6, badge.Y + 3, badge.Width - 10, badge.Height - 4);
+                    g.DrawString(proto, pf, new SolidBrush(isConn ? Color.FromArgb(185, 195, 225) : Color.FromArgb(120, 125, 150)), textR, bsf);
                 }
-                curX += (int)ps.Width + 16;
+                curX += badgeW + 10;
             }
 
-            // Botões rápidos de Ícone e Cor com micro-cápsula moderna
+            // Botões rápidos de Ícone e Cor com micro-cápsula moderna e espaçamento confortável
             string iconBtnText = I18n.T("BtnIcon");
             string colorBtnText = I18n.T("BtnColor");
-            _btnIconRect  = new Rectangle(curX, 42, 50, 20);
-            _btnColorRect = new Rectangle(curX + 54, 42, 50, 20);
+            using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
+            {
+                int iconW = Math.Max(52, (int)g.MeasureString(iconBtnText, bf).Width + 16);
+                int colorW = Math.Max(54, (int)g.MeasureString(colorBtnText, bf).Width + 24);
+                _btnIconRect  = new Rectangle(curX, 42, iconW, 20);
+                _btnColorRect = new Rectangle(_btnIconRect.Right + 8, 42, colorW, 20);
+            }
             DrawSmallButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  effectiveColor, false);
             DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
@@ -413,27 +426,30 @@ namespace OmniBattery.UI
         {
             using (GraphicsPath p = RoundedRect(r, 6))
             {
-                Color bgTop = hovered ? Color.FromArgb(60, 68, 102) : Color.FromArgb(36, 42, 66);
-                Color bgBottom = hovered ? Color.FromArgb(46, 52, 80) : Color.FromArgb(28, 32, 52);
+                Color bgTop = hovered ? Color.FromArgb(50, 58, 88) : Color.FromArgb(28, 34, 52);
+                Color bgBottom = hovered ? Color.FromArgb(38, 44, 68) : Color.FromArgb(20, 24, 38);
                 using (LinearGradientBrush b = new LinearGradientBrush(r, bgTop, bgBottom, 90f))
                     g.FillPath(b, p);
 
-                using (Pen pen = new Pen(Color.FromArgb(hovered ? 130 : 55, 255, 255, 255), 1f))
+                using (Pen pen = new Pen(Color.FromArgb(hovered ? 120 : 45, 255, 255, 255), 1f))
                     g.DrawPath(pen, p);
             }
 
-            if (showDot)
+            using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
             {
-                using (SolidBrush db = new SolidBrush(accent))
-                    g.FillEllipse(db, r.X + 6, r.Y + 6, 8, 8);
+                if (showDot)
+                {
+                    using (SolidBrush db = new SolidBrush(accent))
+                        g.FillEllipse(db, r.X + 6, r.Y + 6, 7, 7);
 
-                using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
                     g.DrawString(label, bf, Brushes.White, r.X + 17, r.Y + 3);
-            }
-            else
-            {
-                using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
-                    g.DrawString(label, bf, Brushes.White, r.X + 8, r.Y + 3);
+                }
+                else
+                {
+                    SizeF s = g.MeasureString(label, bf);
+                    float tx = r.X + (r.Width - s.Width) / 2f;
+                    g.DrawString(label, bf, Brushes.White, tx, r.Y + 3);
+                }
             }
         }
 
@@ -458,19 +474,27 @@ namespace OmniBattery.UI
                     g.DrawPath(pen, p);
             }
 
-            // LED de status
+            // Remove quaisquer marcadores existentes na string para evitar bola verde duplicada
+            string cleanLabel = label.TrimStart('●', '○', ' ').Trim();
+
+            // Apenas UMA bola LED limpa indicadora
             if (isConnected)
             {
                 using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
-                    g.FillEllipse(dotB, r.X + 8, r.Y + 8, 8, 8);
+                    g.FillEllipse(dotB, r.X + 8, r.Y + 8, 7, 7);
+            }
+            else
+            {
+                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(140, 145, 170)))
+                    g.FillEllipse(dotB, r.X + 8, r.Y + 8, 7, 7);
             }
 
             using (Font f = new Font("Segoe UI", 7.6f, FontStyle.Bold))
             {
-                int textX = isConnected ? r.X + 21 : r.X + 8;
+                int textX = r.X + 20;
                 using (SolidBrush tb = new SolidBrush(statusColor))
                 {
-                    g.DrawString(label, f, tb, textX, r.Y + 4);
+                    g.DrawString(cleanLabel, f, tb, textX, r.Y + 4);
                 }
             }
         }

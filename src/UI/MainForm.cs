@@ -39,6 +39,7 @@ namespace OmniBattery.UI
 
         private Image _bgImage = null;
         private bool _isGifAnimated = false;
+        private VideoBackgroundPlayer _videoPlayer = null;
         private int _bgOpacity = 75;
         private bool _isScanning = false;
 
@@ -175,8 +176,13 @@ namespace OmniBattery.UI
             };
             _lblDeviceCount.Paint += delegate(object sender, PaintEventArgs e)
             {
+                if (string.IsNullOrEmpty(_lblDeviceCount.Text))
+                    return;
+
                 Graphics g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
                 Rectangle cr = new Rectangle(0, 0, _lblDeviceCount.Width - 1, _lblDeviceCount.Height - 1);
                 using (GraphicsPath cp = CreateRoundedRect(cr, 11))
                 {
@@ -189,6 +195,12 @@ namespace OmniBattery.UI
                 // LED dot pulsante verde
                 using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
                     g.FillEllipse(dotB, 8, 8, 8, 8);
+
+                // Texto do contador com renderização nítida
+                Rectangle tr = new Rectangle(22, 1, _lblDeviceCount.Width - 26, _lblDeviceCount.Height - 2);
+                TextRenderer.DrawText(g, _lblDeviceCount.Text, _lblDeviceCount.Font, tr,
+                    Color.FromArgb(205, 220, 255),
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             };
             _headerPanel.Controls.Add(_lblDeviceCount);
 
@@ -196,7 +208,7 @@ namespace OmniBattery.UI
             if (!isAdmin)
             {
                 _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(68, 30, 42));
-                _btnAdmin.Size = new Size(88, 34);
+                _btnAdmin.Size = new Size(82, 34);
                 _btnAdmin.ForeColor = Color.FromArgb(255, 140, 140);
                 _btnAdmin.AccentColor = Color.FromArgb(255, 90, 90);
                 _btnAdmin.IconType = ButtonIconType.Shield;
@@ -206,7 +218,7 @@ namespace OmniBattery.UI
             }
 
             _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(34, 40, 62));
-            _btnBackground.Size = new Size(92, 34);
+            _btnBackground.Size = new Size(84, 34);
             _btnBackground.IconType = ButtonIconType.Palette;
             _btnBackground.Click += OnBackgroundButtonClick;
             _headerPanel.Controls.Add(_btnBackground);
@@ -214,7 +226,7 @@ namespace OmniBattery.UI
             bool overlayActive = _manager.Settings.OverlayEnabled;
             _btnOverlay = CreateStyledButton(overlayActive ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay"),
                 overlayActive ? Color.FromArgb(24, 65, 45) : Color.FromArgb(34, 40, 62));
-            _btnOverlay.Size = new Size(106, 34);
+            _btnOverlay.Size = new Size(96, 34);
             _btnOverlay.AccentColor = overlayActive ? Color.FromArgb(0, 230, 118) : Color.FromArgb(88, 101, 242);
             _btnOverlay.IconType = ButtonIconType.Overlay;
             _btnOverlay.UseAccentBorder = overlayActive;
@@ -222,13 +234,13 @@ namespace OmniBattery.UI
             _headerPanel.Controls.Add(_btnOverlay);
 
             _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(34, 40, 62));
-            _btnHistory.Size = new Size(102, 34);
+            _btnHistory.Size = new Size(92, 34);
             _btnHistory.IconType = ButtonIconType.History;
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
             _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(88, 101, 242));
-            _btnRefresh.Size = new Size(108, 34);
+            _btnRefresh.Size = new Size(98, 34);
             _btnRefresh.AccentColor = Color.FromArgb(140, 160, 255);
             _btnRefresh.IconType = ButtonIconType.Refresh;
             _btnRefresh.UseAccentBorder = true;
@@ -236,7 +248,7 @@ namespace OmniBattery.UI
             _headerPanel.Controls.Add(_btnRefresh);
 
             _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(34, 40, 62));
-            _btnSettings.Size = new Size(102, 34);
+            _btnSettings.Size = new Size(92, 34);
             _btnSettings.IconType = ButtonIconType.Gear;
             _btnSettings.Click += OnSettingsClick;
             _headerPanel.Controls.Add(_btnSettings);
@@ -357,9 +369,9 @@ namespace OmniBattery.UI
 
             // Reposition header buttons right-aligned
             if (_btnRefresh != null)
-                _btnRefresh.Width = _isScanning ? 175 : 108;
+                _btnRefresh.Width = _isScanning ? 180 : 98;
 
-            int btnX = cw - 16;
+            int btnX = cw - 14;
             AeroGlassButton[] buttons = new[]
             {
                 _btnSettings, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin
@@ -368,16 +380,28 @@ namespace OmniBattery.UI
             foreach (AeroGlassButton btn in buttons)
             {
                 if (btn == null) continue;
-                btnX -= btn.Width + 8;
+                btnX -= btn.Width + 6;
                 btn.Location = new Point(btnX, 17);
             }
 
             // Reposition device counter badge safely so it never overlaps buttons
             if (_lblDeviceCount != null)
             {
-                int leftPos = 156;
+                int leftPos = 146;
                 _lblDeviceCount.Location = new Point(leftPos, 22);
-                _lblDeviceCount.Visible = (btnX > leftPos + _lblDeviceCount.Width + 10);
+                if (!string.IsNullOrEmpty(_lblDeviceCount.Text))
+                {
+                    using (Graphics g = CreateGraphics())
+                    {
+                        SizeF sz = g.MeasureString(_lblDeviceCount.Text, _lblDeviceCount.Font);
+                        _lblDeviceCount.Width = Math.Max(110, (int)sz.Width + 28);
+                    }
+                    _lblDeviceCount.Visible = (btnX >= leftPos + _lblDeviceCount.Width + 4);
+                }
+                else
+                {
+                    _lblDeviceCount.Visible = false;
+                }
             }
 
             // Footer: full bottom
@@ -545,6 +569,13 @@ namespace OmniBattery.UI
         {
             string path = _manager.Settings.BackgroundImagePath;
 
+            if (_videoPlayer != null)
+            {
+                _videoPlayer.Stop();
+                _videoPlayer.Dispose();
+                _videoPlayer = null;
+            }
+
             if (_bgImage != null && _isGifAnimated)
                 ImageAnimator.StopAnimate(_bgImage, OnFrameChanged);
 
@@ -553,18 +584,48 @@ namespace OmniBattery.UI
 
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
-                try
+                string ext = Path.GetExtension(path).ToLowerInvariant();
+                if (ext == ".mp4")
                 {
-                    _bgImage = Image.FromFile(path);
-                    _isGifAnimated = ImageAnimator.CanAnimate(_bgImage);
-                    if (_isGifAnimated)
-                        ImageAnimator.Animate(_bgImage, OnFrameChanged);
+                    try
+                    {
+                        _videoPlayer = new VideoBackgroundPlayer();
+                        _videoPlayer.FrameReady += OnVideoFrameReady;
+                        _videoPlayer.LoadVideo(path);
+                    }
+                    catch
+                    {
+                        if (_videoPlayer != null)
+                        {
+                            _videoPlayer.Dispose();
+                            _videoPlayer = null;
+                        }
+                    }
                 }
-                catch { _bgImage = null; }
+                else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
+                {
+                    try
+                    {
+                        _bgImage = Image.FromFile(path);
+                    }
+                    catch { _bgImage = null; }
+                }
             }
 
             _scrollPanel.BgImage = _bgImage;
             _scrollPanel.BgOpacity = _bgOpacity;
+            _scrollPanel.Invalidate();
+        }
+
+        private void OnVideoFrameReady(Bitmap frame)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<Bitmap>(OnVideoFrameReady), frame); } catch { }
+                return;
+            }
+
+            _scrollPanel.BgImage = frame;
             _scrollPanel.Invalidate();
         }
 
@@ -580,13 +641,13 @@ namespace OmniBattery.UI
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Renderer = new DarkToolStripRenderer();
 
-            ToolStripMenuItem itemChoose = new ToolStripMenuItem("Escolher Imagem (PNG, JPG, GIF, BMP)...");
+            ToolStripMenuItem itemChoose = new ToolStripMenuItem("Escolher Imagem ou Vídeo (PNG, JPG, MP4)...");
             itemChoose.Click += delegate
             {
                 using (OpenFileDialog ofd = new OpenFileDialog())
                 {
-                    ofd.Title = "Escolher Imagem de Fundo";
-                    ofd.Filter = "Imagens (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp";
+                    ofd.Title = "Escolher Fundo (PNG, JPG, MP4)";
+                    ofd.Filter = "Arquivos Suportados (*.png;*.jpg;*.jpeg;*.mp4)|*.png;*.jpg;*.jpeg;*.mp4|Imagens (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|Vídeos (*.mp4)|*.mp4";
                     if (ofd.ShowDialog(this) == DialogResult.OK)
                     {
                         _manager.Settings.BackgroundImagePath = ofd.FileName;
@@ -597,11 +658,11 @@ namespace OmniBattery.UI
             };
             menu.Items.Add(itemChoose);
 
-            if (_bgImage != null)
+            if (_bgImage != null || (_videoPlayer != null && _videoPlayer.IsPlaying))
             {
                 menu.Items.Add(new ToolStripSeparator());
 
-                ToolStripMenuItem itemRemove = new ToolStripMenuItem("Remover Imagem (Fundo Padrão Escuro)");
+                ToolStripMenuItem itemRemove = new ToolStripMenuItem("Remover Fundo (Padrão Escuro)");
                 itemRemove.Click += delegate
                 {
                     _manager.Settings.BackgroundImagePath = "";
@@ -649,7 +710,7 @@ namespace OmniBattery.UI
             {
                 _btnRefresh.Enabled = false;
                 _btnRefresh.Text = I18n.T("BtnScanning");
-                _btnRefresh.Width = 165;
+                _btnRefresh.Width = 195;
                 _lblDeviceCount.Text = I18n.T("BtnScanning");
                 _lblStatus.Text = I18n.T("ScanningStatus");
             }
@@ -657,7 +718,7 @@ namespace OmniBattery.UI
             {
                 _btnRefresh.Enabled = true;
                 _btnRefresh.Text = I18n.T("BtnRefresh");
-                _btnRefresh.Width = 92;
+                _btnRefresh.Width = 108;
                 _lblStatus.Text = I18n.T("LastUpdatedStatus", DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
             }
             Relayout();
@@ -672,6 +733,8 @@ namespace OmniBattery.UI
                 _lblDeviceCount.Text = I18n.T("DevicesCount", count);
             else if (!_isScanning)
                 _lblDeviceCount.Text = "";
+
+            Relayout();
 
             _cardsFlow.SuspendLayout();
 
@@ -1023,14 +1086,6 @@ namespace OmniBattery.UI
                     });
                 };
 
-                if (_manager.Settings.HiddenDevices.Count > 0)
-                {
-                    AeroGlassButton btnRestore = CreateStyledButton(string.Format("Restaurar Dispositivos ({0})", _manager.Settings.HiddenDevices.Count), Color.FromArgb(50, 55, 80));
-                    btnRestore.Location = new Point(20, y); btnRestore.Size = new Size(260, 30);
-                    btnRestore.Click += delegate { _manager.Settings.HiddenDevices.Clear(); _manager.Settings.Save(); _manager.TriggerScanAsync(); btnRestore.Enabled = false; };
-                    sf.Controls.Add(btnRestore); y += 38;
-                }
-
                 AeroGlassButton btnSave = CreateStyledButton(I18n.T("BtnSave"), Color.FromArgb(88, 101, 242));
                 btnSave.Location = new Point(190, y); btnSave.Size = new Size(95, 32);
                 btnSave.Click += delegate
@@ -1105,6 +1160,12 @@ namespace OmniBattery.UI
             {
                 _trayManager.Dispose();
                 _trayManager = null;
+            }
+
+            if (_videoPlayer != null)
+            {
+                _videoPlayer.Dispose();
+                _videoPlayer = null;
             }
 
             if (_bgImage != null && _isGifAnimated)
