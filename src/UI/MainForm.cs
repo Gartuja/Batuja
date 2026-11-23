@@ -36,7 +36,6 @@ namespace OmniBattery.UI
         private AeroGlassButton _btnOverlay;
         private AeroGlassButton _btnBackground;
         private AeroGlassButton _btnAdmin;
-        private AeroGlassButton _btnLanguage;
 
         private Image _bgImage = null;
         private bool _isGifAnimated = false;
@@ -99,8 +98,8 @@ namespace OmniBattery.UI
         private void InitializeFormStyle()
         {
             Text = I18n.T("AppTitle");
-            Size = new Size(930, 640);
-            MinimumSize = new Size(720, 480);
+            Size = new Size(940, 640);
+            MinimumSize = new Size(840, 500);
             BackColor = Color.FromArgb(18, 20, 30);
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9f, FontStyle.Regular);
@@ -176,7 +175,7 @@ namespace OmniBattery.UI
             if (!isAdmin)
             {
                 _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(80, 35, 45));
-                _btnAdmin.Size = new Size(68, 32);
+                _btnAdmin.Size = new Size(76, 32);
                 _btnAdmin.Font = new Font("Segoe UI", 8.5f, FontStyle.Bold);
                 _btnAdmin.ForeColor = Color.FromArgb(255, 120, 120);
                 _btnAdmin.AccentColor = Color.FromArgb(255, 90, 90);
@@ -186,21 +185,21 @@ namespace OmniBattery.UI
             }
 
             _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(42, 48, 70));
-            _btnBackground.Size = new Size(72, 32);
+            _btnBackground.Size = new Size(84, 32);
             _btnBackground.Click += OnBackgroundButtonClick;
             _headerPanel.Controls.Add(_btnBackground);
 
             bool overlayActive = _manager.Settings.OverlayEnabled;
             _btnOverlay = CreateStyledButton(overlayActive ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay"),
                 overlayActive ? Color.FromArgb(46, 180, 100) : Color.FromArgb(42, 48, 70));
-            _btnOverlay.Size = new Size(88, 32);
+            _btnOverlay.Size = new Size(92, 32);
             _btnOverlay.AccentColor = overlayActive ? Color.FromArgb(46, 220, 113) : Color.FromArgb(88, 101, 242);
             _btnOverlay.UseAccentBorder = overlayActive;
             _btnOverlay.Click += delegate { _overlayForm.ToggleVisibility(); };
             _headerPanel.Controls.Add(_btnOverlay);
 
             _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(42, 48, 70));
-            _btnHistory.Size = new Size(86, 32);
+            _btnHistory.Size = new Size(88, 32);
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
@@ -212,15 +211,10 @@ namespace OmniBattery.UI
             _headerPanel.Controls.Add(_btnRefresh);
 
             _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(42, 48, 70));
-            _btnSettings.Size = new Size(78, 32);
+            _btnSettings.Size = new Size(96, 32);
+            _btnSettings.ShowGearIcon = true;
             _btnSettings.Click += OnSettingsClick;
             _headerPanel.Controls.Add(_btnSettings);
-
-            // Botão de seleção de Idioma (PT, EN, ES)
-            _btnLanguage = CreateStyledButton(GetLanguageButtonText(), Color.FromArgb(42, 48, 70));
-            _btnLanguage.Size = new Size(68, 32);
-            _btnLanguage.Click += OnLanguageButtonClick;
-            _headerPanel.Controls.Add(_btnLanguage);
 
             Controls.Add(_headerPanel);
 
@@ -330,16 +324,19 @@ namespace OmniBattery.UI
             _headerPanel.SetBounds(0, 0, cw, HEADER_H);
 
             // Reposition header buttons right-aligned
-            int btnX = cw - 14;
+            if (_btnRefresh != null)
+                _btnRefresh.Width = _isScanning ? 165 : 92;
+
+            int btnX = cw - 16;
             AeroGlassButton[] buttons = new[]
             {
-                _btnSettings, _btnLanguage, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin
+                _btnSettings, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin
             };
 
             foreach (AeroGlassButton btn in buttons)
             {
                 if (btn == null) continue;
-                btnX -= btn.Width + 6;
+                btnX -= btn.Width + 8;
                 btn.Location = new Point(btnX, 16);
             }
 
@@ -380,14 +377,14 @@ namespace OmniBattery.UI
             _emptyPanel = new Panel
             {
                 Size = new Size(540, 240),
-                BackColor = Color.FromArgb(24, 27, 40)
+                BackColor = Color.Transparent
             };
             _emptyPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                Rectangle r = new Rectangle(0, 0, _emptyPanel.Width - 1, _emptyPanel.Height - 1);
-                using (GraphicsPath p = CreateRoundedRect(r, 12))
+                RectangleF r = new RectangleF(1f, 1f, _emptyPanel.Width - 2f, _emptyPanel.Height - 2f);
+                using (GraphicsPath p = CreateRoundedRect(r, 12f))
                 {
                     using (SolidBrush b = new SolidBrush(Color.FromArgb(24, 27, 40)))
                         g.FillPath(b, p);
@@ -428,7 +425,7 @@ namespace OmniBattery.UI
                        I18n.T("NoDevicesDesc3") + "\n" +
                        I18n.T("NoDevicesDesc4"),
                 Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(140, 145, 175),
+                ForeColor = Color.FromArgb(145, 150, 180),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.TopCenter,
                 Location = new Point(0, 114),
@@ -437,52 +434,19 @@ namespace OmniBattery.UI
             _emptyPanel.Controls.Add(_lblEmptyDesc);
         }
 
-        private static GraphicsPath CreateRoundedRect(Rectangle r, int radius)
+        private static GraphicsPath CreateRoundedRect(RectangleF r, float radius)
         {
             GraphicsPath path = new GraphicsPath();
-            int d = radius * 2;
+            float d = radius * 2f;
+            if (d > r.Width) d = r.Width;
+            if (d > r.Height) d = r.Height;
+
             path.AddArc(r.X, r.Y, d, d, 180, 90);
             path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
             path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
-        }
-
-        // ─────────────────────────── Multi-Language Support ──────────────────
-        private string GetLanguageButtonText()
-        {
-            switch (I18n.CurrentLanguage)
-            {
-                case AppLanguage.EN: return "🌐 EN";
-                case AppLanguage.ES: return "🌐 ES";
-                default: return "🌐 PT";
-            }
-        }
-
-        private void OnLanguageButtonClick(object sender, EventArgs e)
-        {
-            ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Renderer = new DarkToolStripRenderer();
-
-            Action<string, AppLanguage> addLang = (name, lang) =>
-            {
-                ToolStripMenuItem item = new ToolStripMenuItem(name);
-                item.Checked = (I18n.CurrentLanguage == lang);
-                item.Click += delegate
-                {
-                    _manager.Settings.Language = lang;
-                    _manager.Settings.Save();
-                    I18n.SetLanguage(lang);
-                };
-                menu.Items.Add(item);
-            };
-
-            addLang("Português (PT)", AppLanguage.PT);
-            addLang("English (EN)", AppLanguage.EN);
-            addLang("Español (ES)", AppLanguage.ES);
-
-            menu.Show(_btnLanguage, new Point(0, _btnLanguage.Height + 2));
         }
 
         private void ApplyLanguage()
@@ -493,9 +457,12 @@ namespace OmniBattery.UI
             if (_btnBackground != null) _btnBackground.Text = I18n.T("BtnBackground");
             if (_btnOverlay != null) _btnOverlay.Text = (_overlayForm != null && _overlayForm.Visible) ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay");
             if (_btnHistory != null) _btnHistory.Text = I18n.T("BtnHistory");
-            if (_btnRefresh != null) _btnRefresh.Text = _isScanning ? I18n.T("BtnScanning") : I18n.T("BtnRefresh");
+            if (_btnRefresh != null)
+            {
+                _btnRefresh.Text = _isScanning ? I18n.T("BtnScanning") : I18n.T("BtnRefresh");
+                _btnRefresh.Width = _isScanning ? 165 : 92;
+            }
             if (_btnSettings != null) _btnSettings.Text = I18n.T("BtnSettings");
-            if (_btnLanguage != null) _btnLanguage.Text = GetLanguageButtonText();
             if (_chkMinimize != null) _chkMinimize.Text = I18n.T("MinToTrayOnClose");
 
             if (_lblEmptyMsg != null) _lblEmptyMsg.Text = I18n.T("NoDevicesTitle");
@@ -629,14 +596,18 @@ namespace OmniBattery.UI
             {
                 _btnRefresh.Enabled = false;
                 _btnRefresh.Text = I18n.T("BtnScanning");
+                _btnRefresh.Width = 165;
+                _lblDeviceCount.Text = I18n.T("BtnScanning");
                 _lblStatus.Text = I18n.T("ScanningStatus");
             }
             else
             {
                 _btnRefresh.Enabled = true;
                 _btnRefresh.Text = I18n.T("BtnRefresh");
+                _btnRefresh.Width = 92;
                 _lblStatus.Text = I18n.T("LastUpdatedStatus", DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
             }
+            Relayout();
         }
 
         private void OnDevicesUpdated(List<BatteryDevice> devices)
@@ -644,7 +615,10 @@ namespace OmniBattery.UI
             if (InvokeRequired) { Invoke(new Action<List<BatteryDevice>>(OnDevicesUpdated), devices); return; }
 
             int count = (devices != null) ? devices.Count : 0;
-            _lblDeviceCount.Text = I18n.T("DevicesCount", count);
+            if (count > 0)
+                _lblDeviceCount.Text = I18n.T("DevicesCount", count);
+            else if (!_isScanning)
+                _lblDeviceCount.Text = "";
 
             _cardsFlow.SuspendLayout();
 

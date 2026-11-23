@@ -82,7 +82,7 @@ namespace OmniBattery.Core
             Reg("AppTitle", "Batuja - Monitor de Dispositivos sem Fio", "Batuja - Wireless Device Monitor", "Batuja - Monitor de Dispositivos Inalámbricos");
             Reg("DevicesCount", "{0} dispositivo(s)", "{0} device(s)", "{0} dispositivo(s)");
             Reg("Ready", "Pronto", "Ready", "Listo");
-            Reg("ScanningStatus", "Buscando periféricos sem fio...", "Searching for wireless peripherals...", "Buscando periféricos inalámbricos...");
+            Reg("ScanningStatus", "Buscando dispositivos sem fio...", "Searching for wireless devices...", "Buscando dispositivos inalámbricos...");
             Reg("LastUpdatedStatus", "Última atualização às {0:HH:mm:ss} (Próxima em {1}s)", "Last updated at {0:HH:mm:ss} (Next in {1}s)", "Última actualización a las {0:HH:mm:ss} (Próxima en {1}s)");
             Reg("NoDevicesTitle", "Nenhum dispositivo sem fio detectado", "No wireless devices detected", "Ningún dispositivo inalámbrico detectado");
             Reg("NoDevicesDesc1", "• Conecte seus fones, mouse ou teclado sem fio (2.4GHz ou Bluetooth).", "• Connect your wireless headphones, mouse or keyboard (2.4GHz or Bluetooth).", "• Conecte sus auriculares, ratón o teclado inalámbrico (2.4GHz o Bluetooth).");
@@ -97,7 +97,7 @@ namespace OmniBattery.Core
             Reg("BtnOverlayActive", "● Sobrepor", "● Overlay", "● Superponer");
             Reg("BtnHistory", "Histórico", "History", "Historial");
             Reg("BtnRefresh", "Atualizar", "Refresh", "Actualizar");
-            Reg("BtnScanning", "Varrendo...", "Scanning...", "Buscando...");
+            Reg("BtnScanning", "Buscando dispositivos...", "Searching devices...", "Buscando dispositivos...");
             Reg("BtnSettings", "Configs", "Settings", "Ajustes");
             Reg("BtnLanguage", "Idioma", "Language", "Idioma");
 

@@ -26,7 +26,7 @@ namespace OmniBattery.UI
 
             _defaultIcon = new NotifyIcon
             {
-                Text = "Batuja: Varrendo dispositivos...",
+                Text = "Batuja: Buscando dispositivos...",
                 Visible = true,
                 Icon = CreateNumericIcon(null, Color.FromArgb(88, 101, 242))
             };
