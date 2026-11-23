@@ -26,11 +26,18 @@ namespace OmniBattery.UI
     {
         private bool _isHovered = false;
         private bool _isPressed = false;
-        private int _cornerRadius = 9;
+        private int _cornerRadius = 0;
         private Color _baseColor;
         private Color _accentColor;
         private bool _useAccentBorder = false;
         private ButtonIconType _iconType = ButtonIconType.None;
+        private bool _classic3D = true;
+
+        public bool Classic3D
+        {
+            get { return _classic3D; }
+            set { _classic3D = value; Invalidate(); }
+        }
 
         public int CornerRadius
         {
@@ -130,6 +137,82 @@ namespace OmniBattery.UI
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            if (_classic3D)
+            {
+                Rectangle r = new Rectangle(0, 0, Width, Height);
+                Color faceColor = Color.FromArgb(192, 192, 192);
+                using (SolidBrush b = new SolidBrush(faceColor))
+                    g.FillRectangle(b, r);
+
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
+                {
+                    if (_isPressed)
+                    {
+                        g.DrawLine(pBlack, r.Left, r.Top, r.Right - 1, r.Top);
+                        g.DrawLine(pBlack, r.Left, r.Top, r.Left, r.Bottom - 1);
+                        g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                        g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                        g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    }
+                    else
+                    {
+                        g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
+                        g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
+                        g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                        g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                        g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pDark, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                        g.DrawLine(pDark, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                    }
+                }
+
+                Color textColor = !Enabled ? Color.FromArgb(128, 128, 128) : Color.Black;
+                float offsetY = _isPressed ? 1f : 0f;
+                float offsetX = _isPressed ? 1f : 0f;
+
+                if (_iconType != ButtonIconType.None)
+                {
+                    SizeF textSize = g.MeasureString(Text, Font);
+                    float iconDiameter = 12f;
+                    float gap = 5f;
+                    float totalContentWidth = iconDiameter + gap + textSize.Width;
+
+                    float startX = Math.Max(5f, (Width - totalContentWidth) / 2f) + offsetX;
+                    float iconCx = startX + (iconDiameter / 2f);
+                    float iconCy = (Height / 2f) + offsetY;
+
+                    DrawVectorIcon(g, _iconType, iconCx, iconCy, textColor);
+
+                    float textX = startX + iconDiameter + gap;
+                    float textY = ((Height - textSize.Height) / 2f) + offsetY;
+                    using (SolidBrush textBrush = new SolidBrush(textColor))
+                    {
+                        g.DrawString(Text, Font, textBrush, textX, textY);
+                    }
+                }
+                else
+                {
+                    RectangleF textRect = new RectangleF(offsetX, offsetY, Width, Height);
+                    StringFormat sf = new StringFormat
+                    {
+                        Alignment = StringAlignment.Center,
+                        LineAlignment = StringAlignment.Center
+                    };
+                    using (SolidBrush textBrush = new SolidBrush(textColor))
+                    {
+                        g.DrawString(Text, Font, textBrush, textRect, sf);
+                    }
+                }
+                return;
+            }
 
             float w = Width - 1.2f;
             float h = Height - 1.2f;

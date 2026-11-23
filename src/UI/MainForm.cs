@@ -111,12 +111,12 @@ namespace OmniBattery.UI
         private void InitializeFormStyle()
         {
             Text = I18n.T("AppTitle");
-            Size = new Size(1000, 580);
-            MinimumSize = new Size(860, 500);
+            Size = new Size(1000, 560);
+            MinimumSize = new Size(860, 480);
             FormBorderStyle = FormBorderStyle.None;
-            BackColor = Color.FromArgb(14, 16, 26);
-            ForeColor = Color.White;
-            Font = new Font("Segoe UI", 9f, FontStyle.Regular);
+            BackColor = Color.FromArgb(192, 192, 192);
+            ForeColor = Color.Black;
+            Font = new Font("Tahoma", 8.5f, FontStyle.Regular);
             StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = true;
             DoubleBuffered = true;
@@ -128,56 +128,44 @@ namespace OmniBattery.UI
         {
             SuspendLayout();
 
-            // ── 0. Custom TitleBar com botões de semáforo (Traffic Lights) ────
+            // ── 0. Custom TitleBar com botões clássicos Win98 (_ □ X) ─────────
             _titleBarPanel = new Panel
             {
-                BackColor = Color.FromArgb(18, 21, 33),
-                Height = 32
+                BackColor = Color.FromArgb(0, 0, 128),
+                Height = 22
             };
             _titleBarPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-
                 Rectangle r = _titleBarPanel.ClientRectangle;
                 if (r.Width <= 0 || r.Height <= 0) return;
 
-                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(18, 21, 33), Color.FromArgb(14, 16, 26), 90f))
-                    g.FillRectangle(lgb, r);
+                // Win98 Blue Gradient: Navy (#000080) -> Azure (#1084d0)
+                Rectangle gradRect = new Rectangle(2, 2, r.Width - 4, r.Height - 2);
+                using (LinearGradientBrush lgb = new LinearGradientBrush(gradRect, Color.FromArgb(0, 0, 128), Color.FromArgb(16, 132, 208), 0f))
+                    g.FillRectangle(lgb, gradRect);
 
                 // Pequeno ícone do mouse na esquerda
                 try
                 {
-                    Rectangle iconBox = new Rectangle(12, 8, 16, 16);
-                    IconRenderer.DrawDeviceIcon(g, iconBox, DeviceCategory.Mouse, Color.FromArgb(160, 190, 255), null);
+                    Rectangle iconBox = new Rectangle(5, 4, 14, 15);
+                    IconRenderer.DrawDeviceIcon(g, iconBox, DeviceCategory.Mouse, Color.White, null);
                 }
                 catch { }
 
                 // Título da janela
-                using (Font tf = new Font("Segoe UI", 9f))
+                using (Font tf = new Font("Tahoma", 8.5f, FontStyle.Bold))
                 {
-                    g.DrawString("Batuja - Monitor de Dispositivos sem Fio", tf, new SolidBrush(Color.FromArgb(145, 155, 180)), 34, 7);
+                    g.DrawString("Batuja - Monitor de Dispositivos sem Fio", tf, Brushes.White, 23, 4);
                 }
 
-                // Botões de semáforo (Vermelho, Amarelo, Verde) no canto direito
-                int tlY = 10;
-                int tlD = 12;
-                int redX = r.Width - 58;
-                int yelX = r.Width - 40;
-                int grnX = r.Width - 22;
-
-                // Vermelho (Fechar / Minimizar para bandeja)
-                Color redC = _trafficHover == 1 ? Color.FromArgb(255, 60, 50) : Color.FromArgb(255, 95, 86);
-                using (SolidBrush b = new SolidBrush(redC)) g.FillEllipse(b, redX, tlY, tlD, tlD);
-
-                // Amarelo (Minimizar)
-                Color yelC = _trafficHover == 2 ? Color.FromArgb(255, 165, 0) : Color.FromArgb(255, 189, 46);
-                using (SolidBrush b = new SolidBrush(yelC)) g.FillEllipse(b, yelX, tlY, tlD, tlD);
-
-                // Verde (Maximizar / Restaurar)
-                Color grnC = _trafficHover == 3 ? Color.FromArgb(45, 225, 75) : Color.FromArgb(39, 201, 63);
-                using (SolidBrush b = new SolidBrush(grnC)) g.FillEllipse(b, grnX, tlY, tlD, tlD);
+                // Botões clássicos de janela: _ □ X com relevo 3D
+                int btnW = 16, btnH = 14;
+                int bY = 4;
+                int rW = r.Width;
+                DrawTitleButton(g, new Rectangle(rW - 58, bY, btnW, btnH), "_", _trafficHover == 2);
+                DrawTitleButton(g, new Rectangle(rW - 40, bY, btnW, btnH), "□", _trafficHover == 3);
+                DrawTitleButton(g, new Rectangle(rW - 22, bY, btnW, btnH), "X", _trafficHover == 1);
             };
 
             _titleBarPanel.MouseDown += delegate(object sender, MouseEventArgs e)
@@ -185,18 +173,17 @@ namespace OmniBattery.UI
                 if (e.Button == MouseButtons.Left)
                 {
                     int rW = _titleBarPanel.Width;
-                    int redX = rW - 58, yelX = rW - 40, grnX = rW - 22;
-                    int tlY = 10, tlD = 12;
+                    int bY = 4, btnW = 16, btnH = 14;
 
-                    if (new Rectangle(redX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    if (new Rectangle(rW - 22, bY, btnW, btnH).Contains(e.Location))
                     {
                         Close();
                     }
-                    else if (new Rectangle(yelX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    else if (new Rectangle(rW - 58, bY, btnW, btnH).Contains(e.Location))
                     {
                         WindowState = FormWindowState.Minimized;
                     }
-                    else if (new Rectangle(grnX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location))
+                    else if (new Rectangle(rW - 40, bY, btnW, btnH).Contains(e.Location))
                     {
                         WindowState = (WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized);
                     }
@@ -211,18 +198,16 @@ namespace OmniBattery.UI
             _titleBarPanel.MouseMove += delegate(object sender, MouseEventArgs e)
             {
                 int rW = _titleBarPanel.Width;
-                int redX = rW - 58, yelX = rW - 40, grnX = rW - 22;
-                int tlY = 10, tlD = 12;
+                int bY = 4, btnW = 16, btnH = 14;
                 int newH = 0;
 
-                if (new Rectangle(redX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 1;
-                else if (new Rectangle(yelX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 2;
-                else if (new Rectangle(grnX - 2, tlY - 2, tlD + 4, tlD + 4).Contains(e.Location)) newH = 3;
+                if (new Rectangle(rW - 22, bY, btnW, btnH).Contains(e.Location)) newH = 1;
+                else if (new Rectangle(rW - 58, bY, btnW, btnH).Contains(e.Location)) newH = 2;
+                else if (new Rectangle(rW - 40, bY, btnW, btnH).Contains(e.Location)) newH = 3;
 
                 if (newH != _trafficHover)
                 {
                     _trafficHover = newH;
-                    _titleBarPanel.Cursor = (newH > 0) ? Cursors.Hand : Cursors.Default;
                     _titleBarPanel.Invalidate();
                 }
             };
@@ -232,45 +217,35 @@ namespace OmniBattery.UI
                 if (_trafficHover != 0)
                 {
                     _trafficHover = 0;
-                    _titleBarPanel.Cursor = Cursors.Default;
                     _titleBarPanel.Invalidate();
                 }
             };
 
             Controls.Add(_titleBarPanel);
 
-            // ── 1. Header Panel com estética AeroGlass ──────────────────────────
+            // ── 1. Header Panel com estética Clássica Win98 ─────────────────────
             _headerPanel = new Panel
             {
-                BackColor = Color.FromArgb(22, 26, 40),
+                BackColor = Color.FromArgb(192, 192, 192),
                 Padding = new Padding(0)
             };
             _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
                 Rectangle r = _headerPanel.ClientRectangle;
                 if (r.Width <= 0 || r.Height <= 0) return;
 
-                // Fundo gradiente vítreo profundo
-                using (LinearGradientBrush lgb = new LinearGradientBrush(r, Color.FromArgb(22, 26, 40), Color.FromArgb(16, 18, 28), 90f))
-                    g.FillRectangle(lgb, r);
+                // Fundo cinza padrão
+                using (SolidBrush b = new SolidBrush(Color.FromArgb(192, 192, 192)))
+                    g.FillRectangle(b, r);
 
-                // Linha de divisão inferior elegante
-                using (Pen bp = new Pen(Color.FromArgb(30, 255, 255, 255), 1f))
-                    g.DrawLine(bp, 0, r.Height - 1, r.Width, r.Height - 1);
-
-                // Brilho azul neon difuso atrás do logotipo do mouse
-                int logoX = 18, logoY = 10;
-                using (GraphicsPath lgp = new GraphicsPath())
+                // Linha de divisão inferior em baixo-relevo (groove)
+                int sepY = r.Height - 2;
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
                 {
-                    lgp.AddEllipse(logoX - 10, logoY - 10, 54, 54);
-                    using (PathGradientBrush lpb = new PathGradientBrush(lgp))
-                    {
-                        lpb.CenterColor = Color.FromArgb(110, 0, 160, 255);
-                        lpb.SurroundColors = new Color[] { Color.Transparent };
-                        g.FillPath(lpb, lgp);
-                    }
+                    g.DrawLine(pDark, 2, sepY, r.Width - 3, sepY);
+                    g.DrawLine(pWhite, 2, sepY + 1, r.Width - 3, sepY + 1);
                 }
             };
 
@@ -286,146 +261,131 @@ namespace OmniBattery.UI
 
             PictureBox pbLogo = new PictureBox
             {
-                Size = new Size(34, 34),
-                Location = new Point(18, 10),
+                Size = new Size(22, 26),
+                Location = new Point(10, 5),
                 BackColor = Color.Transparent,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
-            try { pbLogo.Image = AppIconRenderer.Render(68); } catch { }
+            try { pbLogo.Image = AppIconRenderer.Render(48); } catch { }
             _headerPanel.Controls.Add(pbLogo);
 
             Label lblTitle = new Label
             {
                 Text = "Batuja",
-                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = new Font("Tahoma", 13.5f, FontStyle.Bold),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(62, 11)
+                Location = new Point(36, 7)
             };
             _headerPanel.Controls.Add(lblTitle);
 
             _lblDeviceCount = new Label
             {
                 Text = I18n.T("BtnScanning"),
-                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(195, 210, 255),
+                Font = new Font("Tahoma", 8.25f, FontStyle.Regular),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 AutoSize = false,
-                Size = new Size(160, 22),
+                Size = new Size(160, 20),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(22, 0, 0, 0),
-                Location = new Point(164, 16)
+                Padding = new Padding(14, 0, 0, 0),
+                Location = new Point(114, 10)
             };
             _lblDeviceCount.Paint += delegate(object sender, PaintEventArgs e)
             {
-                if (string.IsNullOrEmpty(_lblDeviceCount.Text))
-                    return;
-
                 Graphics g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                Rectangle cr = new Rectangle(0, 0, _lblDeviceCount.Width - 1, _lblDeviceCount.Height - 1);
-                using (GraphicsPath cp = CreateRoundedRect(cr, 11))
-                {
-                    using (SolidBrush cb = new SolidBrush(Color.FromArgb(26, 30, 48)))
-                        g.FillPath(cb, cp);
-                    using (Pen cpen = new Pen(Color.FromArgb(48, 58, 90), 1f))
-                        g.DrawPath(cpen, cp);
-                }
-
-                // LED dot pulsante verde
-                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
-                    g.FillEllipse(dotB, 8, 7, 8, 8);
-
-                // Texto do contador com renderização nítida
-                Rectangle tr = new Rectangle(22, 0, _lblDeviceCount.Width - 26, _lblDeviceCount.Height);
-                TextRenderer.DrawText(g, _lblDeviceCount.Text, _lblDeviceCount.Font, tr,
-                    Color.FromArgb(205, 220, 255),
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                // LED dot verde estilo clássico (o Label desenha o texto automaticamente com o Padding)
+                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(34, 197, 94)))
+                    g.FillEllipse(dotB, 2, 5, 8, 8);
+                using (Pen dotP = new Pen(Color.FromArgb(0, 100, 0), 1f))
+                    g.DrawEllipse(dotP, 2, 5, 8, 8);
             };
             _headerPanel.Controls.Add(_lblDeviceCount);
 
             bool isAdmin = IsRunningAsAdmin();
             if (!isAdmin)
             {
-                _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(68, 30, 42));
-                _btnAdmin.Size = new Size(82, 34);
-                _btnAdmin.ForeColor = Color.FromArgb(255, 140, 140);
-                _btnAdmin.AccentColor = Color.FromArgb(255, 90, 90);
+                _btnAdmin = CreateStyledButton(I18n.T("BtnAdmin"), Color.FromArgb(192, 192, 192));
+                _btnAdmin.Size = new Size(68, 22);
+                _btnAdmin.ForeColor = Color.Black;
                 _btnAdmin.IconType = ButtonIconType.Shield;
-                _btnAdmin.UseAccentBorder = true;
                 _btnAdmin.Click += OnRestartAsAdmin;
                 _headerPanel.Controls.Add(_btnAdmin);
             }
 
-            _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(34, 40, 62));
-            _btnBackground.Size = new Size(84, 34);
+            _btnBackground = CreateStyledButton(I18n.T("BtnBackground"), Color.FromArgb(192, 192, 192));
+            _btnBackground.Size = new Size(68, 22);
+            _btnBackground.ForeColor = Color.Black;
             _btnBackground.IconType = ButtonIconType.Palette;
             _btnBackground.Click += OnBackgroundButtonClick;
             _headerPanel.Controls.Add(_btnBackground);
 
             bool overlayActive = _manager.Settings.OverlayEnabled;
             _btnOverlay = CreateStyledButton(overlayActive ? I18n.T("BtnOverlayActive") : I18n.T("BtnOverlay"),
-                overlayActive ? Color.FromArgb(24, 65, 45) : Color.FromArgb(34, 40, 62));
-            _btnOverlay.Size = new Size(96, 34);
-            _btnOverlay.AccentColor = overlayActive ? Color.FromArgb(0, 230, 118) : Color.FromArgb(88, 101, 242);
+                Color.FromArgb(192, 192, 192));
+            _btnOverlay.Size = new Size(78, 22);
+            _btnOverlay.ForeColor = Color.Black;
             _btnOverlay.IconType = ButtonIconType.Overlay;
-            _btnOverlay.UseAccentBorder = overlayActive;
             _btnOverlay.Click += delegate { _overlayForm.ToggleVisibility(); };
             _headerPanel.Controls.Add(_btnOverlay);
 
-            _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(34, 40, 62));
-            _btnHistory.Size = new Size(92, 34);
+            _btnHistory = CreateStyledButton(I18n.T("BtnHistory"), Color.FromArgb(192, 192, 192));
+            _btnHistory.Size = new Size(78, 22);
+            _btnHistory.ForeColor = Color.Black;
             _btnHistory.IconType = ButtonIconType.History;
             _btnHistory.Click += OnHistoryClick;
             _headerPanel.Controls.Add(_btnHistory);
 
-            _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(34, 40, 62));
-            _btnRefresh.Size = new Size(98, 34);
-            _btnRefresh.AccentColor = Color.FromArgb(120, 150, 255);
+            _btnRefresh = CreateStyledButton(I18n.T("BtnRefresh"), Color.FromArgb(192, 192, 192));
+            _btnRefresh.Size = new Size(148, 22);
+            _btnRefresh.ForeColor = Color.Black;
             _btnRefresh.IconType = ButtonIconType.Refresh;
-            _btnRefresh.UseAccentBorder = true;
             _btnRefresh.Click += delegate { _manager.TriggerScanAsync(); };
             _headerPanel.Controls.Add(_btnRefresh);
 
-            _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(34, 40, 62));
-            _btnSettings.Size = new Size(92, 34);
+            _btnSettings = CreateStyledButton(I18n.T("BtnSettings"), Color.FromArgb(192, 192, 192));
+            _btnSettings.Size = new Size(76, 22);
+            _btnSettings.ForeColor = Color.Black;
             _btnSettings.IconType = ButtonIconType.Gear;
             _btnSettings.Click += OnSettingsClick;
             _headerPanel.Controls.Add(_btnSettings);
 
             Controls.Add(_headerPanel);
 
-            // ── Footer Panel com estética AeroGlass ──────────────────────────
+            // ── Footer Panel com estética Clássica Win98 ───────────────────────
             _footerPanel = new Panel
             {
-                BackColor = Color.FromArgb(17, 19, 29)
+                BackColor = Color.FromArgb(192, 192, 192)
             };
             _footerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
                 Rectangle r = _footerPanel.ClientRectangle;
                 if (r.Width <= 0 || r.Height <= 0) return;
 
-                using (Pen tp = new Pen(Color.FromArgb(30, 255, 255, 255), 1f))
-                    g.DrawLine(tp, 0, 0, r.Width, 0);
+                // 3 Painéis rebaixados clássicos de barra de status
+                int h = r.Height - 4;
+                int p1W = 380;
+                int p2W = Math.Max(50, r.Width - p1W - 270);
+                int p3X = p1W + p2W + 8;
+                int p3W = Math.Max(240, r.Width - p3X - 4);
 
-                // LED verde indicador de monitoramento ativo
-                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
-                    g.FillEllipse(dotB, 16, 15, 8, 8);
+                Draw3DSunken(g, new Rectangle(2, 2, p1W, h));
+                Draw3DSunken(g, new Rectangle(p1W + 5, 2, p2W, h));
+                Draw3DSunken(g, new Rectangle(p3X, 2, p3W, h));
             };
 
             _lblStatus = new Label
             {
                 Text = I18n.T("Ready"),
-                Font = new Font("Segoe UI", 8.4f),
-                ForeColor = Color.FromArgb(145, 152, 180),
+                Font = new Font("Tahoma", 8f),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(32, 10)
+                Location = new Point(8, 5)
             };
             _footerPanel.Controls.Add(_lblStatus);
 
@@ -433,11 +393,11 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("MinToTrayOnClose"),
                 Checked = _manager.Settings.MinimizeToTrayOnClose,
-                Font = new Font("Segoe UI", 8.4f),
-                ForeColor = Color.FromArgb(165, 172, 200),
+                Font = new Font("Tahoma", 8f),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 AutoSize = true,
-                Location = new Point(16, 10)
+                Location = new Point(16, 4)
             };
             _chkMinimize.CheckedChanged += delegate
             {
@@ -448,9 +408,9 @@ namespace OmniBattery.UI
 
             Controls.Add(_footerPanel);
 
-            // ── Scroll outer panel (background + scrollbar) ──────────────────
+            // ── Scroll outer panel ───────────────────────────────────────────
             _scrollPanel = new BgScrollPanel();
-            _scrollPanel.BackColor = Color.FromArgb(14, 16, 26);
+            _scrollPanel.BackColor = Color.FromArgb(192, 192, 192);
             _scrollPanel.AutoScroll = true;
             _scrollPanel.MouseWheel += OnScrollPanelMouseWheel;
             Controls.Add(_scrollPanel);
@@ -492,22 +452,15 @@ namespace OmniBattery.UI
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            if (WindowState == FormWindowState.Normal)
-            {
-                try
-                {
-                    using (GraphicsPath p = CreateRoundedRect(new Rectangle(0, 0, Width, Height), 12))
-                    {
-                        Region = new Region(p);
-                    }
-                }
-                catch { }
-            }
-            else
-            {
-                Region = null;
-            }
+            Region = null;
             Relayout();
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Draw3DRaised(e.Graphics, new Rectangle(0, 0, Width, Height), 2);
         }
 
         private void Relayout()
@@ -515,9 +468,9 @@ namespace OmniBattery.UI
             if (_headerPanel == null || _footerPanel == null || _scrollPanel == null)
                 return;
 
-            const int TITLE_H = 32;
-            const int HEADER_H = 54;
-            const int FOOTER_H = 36;
+            const int TITLE_H = 22;
+            const int HEADER_H = 36;
+            const int FOOTER_H = 26;
 
             int cw = ClientSize.Width;
             int ch = ClientSize.Height;
@@ -530,9 +483,9 @@ namespace OmniBattery.UI
 
             // Reposition header buttons right-aligned inside header
             if (_btnRefresh != null)
-                _btnRefresh.Width = _isScanning ? 175 : 98;
+                _btnRefresh.Width = _isScanning ? 160 : 130;
 
-            int btnX = cw - 14;
+            int btnX = cw - 8;
             AeroGlassButton[] buttons = new[]
             {
                 _btnSettings, _btnRefresh, _btnHistory, _btnOverlay, _btnBackground, _btnAdmin
@@ -541,21 +494,21 @@ namespace OmniBattery.UI
             foreach (AeroGlassButton btn in buttons)
             {
                 if (btn == null) continue;
-                btnX -= btn.Width + 6;
-                btn.Location = new Point(btnX, 10);
+                btnX -= btn.Width + 4;
+                btn.Location = new Point(btnX, 6);
             }
 
             // Reposition device counter badge safely so it never overlaps buttons
             if (_lblDeviceCount != null)
             {
-                int leftPos = 164;
-                _lblDeviceCount.Location = new Point(leftPos, 16);
+                int leftPos = 114;
+                _lblDeviceCount.Location = new Point(leftPos, 8);
                 if (!string.IsNullOrEmpty(_lblDeviceCount.Text))
                 {
                     using (Graphics g = CreateGraphics())
                     {
                         SizeF sz = g.MeasureString(_lblDeviceCount.Text, _lblDeviceCount.Font);
-                        _lblDeviceCount.Width = Math.Max(120, (int)sz.Width + 28);
+                        _lblDeviceCount.Width = Math.Max(110, (int)sz.Width + 24);
                     }
                     _lblDeviceCount.Visible = (btnX >= leftPos + _lblDeviceCount.Width + 4);
                 }
@@ -568,9 +521,9 @@ namespace OmniBattery.UI
             // Footer: full bottom
             _footerPanel.SetBounds(0, ch - FOOTER_H, cw, FOOTER_H);
 
-            // Footer checkbox right-aligned
+            // Footer checkbox right-aligned inside pane 3
             if (_chkMinimize != null)
-                _chkMinimize.Location = new Point(cw - _chkMinimize.Width - 16, 9);
+                _chkMinimize.Location = new Point(cw - _chkMinimize.Width - 14, 5);
 
             // Scroll area: everything between header and footer
             int scrollH = Math.Max(60, ch - TITLE_H - HEADER_H - FOOTER_H);
@@ -601,58 +554,39 @@ namespace OmniBattery.UI
         {
             _emptyPanel = new Panel
             {
-                Size = new Size(560, 248),
-                BackColor = Color.Transparent
+                Size = new Size(540, 220),
+                BackColor = Color.FromArgb(192, 192, 192)
             };
             _emptyPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                RectangleF r = new RectangleF(1f, 1f, _emptyPanel.Width - 2f, _emptyPanel.Height - 2f);
-                using (GraphicsPath p = CreateRoundedRect(r, 16f))
-                {
-                    using (LinearGradientBrush b = new LinearGradientBrush(r, Color.FromArgb(25, 28, 44), Color.FromArgb(18, 20, 32), 90f))
-                        g.FillPath(b, p);
-
-                    // Top glass highlight
-                    using (Pen sp = new Pen(Color.FromArgb(35, 255, 255, 255), 1f))
-                        g.DrawLine(sp, r.X + 16, r.Y + 1.2f, r.Right - 16, r.Y + 1.2f);
-
-                    using (Pen pen = new Pen(Color.FromArgb(48, 54, 82), 1.2f))
-                        g.DrawPath(pen, p);
-                }
-
-                // Decorative concentric halo around the central icon
-                int iconCx = _emptyPanel.Width / 2;
-                int iconCy = 46;
-                using (Pen halo1 = new Pen(Color.FromArgb(20, 88, 101, 242), 1f))
-                    g.DrawEllipse(halo1, iconCx - 36, iconCy - 36, 72, 72);
-                using (Pen halo2 = new Pen(Color.FromArgb(35, 88, 101, 242), 1.2f))
-                    g.DrawEllipse(halo2, iconCx - 28, iconCy - 28, 56, 56);
+                Draw3DRaised(g, new Rectangle(0, 0, _emptyPanel.Width - 1, _emptyPanel.Height - 1), 2);
             };
 
             PictureBox pbIcon = new PictureBox
             {
-                Size = new Size(48, 48),
-                Location = new Point(256, 22),
+                Size = new Size(40, 40),
+                Location = new Point(250, 20),
                 BackColor = Color.Transparent
             };
             pbIcon.Paint += (s, e) =>
             {
-                IconRenderer.DrawDeviceIcon(e.Graphics, new Rectangle(0, 0, 48, 48),
-                    DeviceCategory.Generico, Color.FromArgb(120, 140, 255), null);
+                Rectangle r = new Rectangle(0, 0, 40, 40);
+                Draw3DSunken(e.Graphics, r);
+                IconRenderer.DrawDeviceIcon(e.Graphics, r,
+                    DeviceCategory.Generico, Color.Black, null);
             };
             _emptyPanel.Controls.Add(pbIcon);
 
             _lblEmptyMsg = new Label
             {
                 Text = I18n.T("NoDevicesTitle"),
-                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = new Font("Tahoma", 11.5f, FontStyle.Bold),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(0, 78),
-                Size = new Size(560, 30)
+                Location = new Point(0, 70),
+                Size = new Size(540, 26)
             };
             _emptyPanel.Controls.Add(_lblEmptyMsg);
 
@@ -662,14 +596,100 @@ namespace OmniBattery.UI
                        I18n.T("NoDevicesDesc2") + "\n" +
                        I18n.T("NoDevicesDesc3") + "\n" +
                        I18n.T("NoDevicesDesc4"),
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(150, 156, 185),
+                Font = new Font("Tahoma", 8.5f, FontStyle.Regular),
+                ForeColor = Color.Black,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.TopCenter,
-                Location = new Point(0, 114),
-                Size = new Size(560, 115)
+                Location = new Point(0, 102),
+                Size = new Size(540, 105)
             };
             _emptyPanel.Controls.Add(_lblEmptyDesc);
+        }
+
+        private static void Draw3DRaised(Graphics g, Rectangle r, int depth = 2)
+        {
+            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
+            {
+                if (depth == 1)
+                {
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                }
+                else
+                {
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pDark, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                    g.DrawLine(pDark, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                }
+            }
+        }
+
+        private static void Draw3DSunken(Graphics g, Rectangle r)
+        {
+            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
+            {
+                g.DrawLine(pDark, r.Left, r.Top, r.Right - 1, r.Top);
+                g.DrawLine(pDark, r.Left, r.Top, r.Left, r.Bottom - 1);
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pLight, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                g.DrawLine(pLight, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+            }
+        }
+
+        private static void DrawTitleButton(Graphics g, Rectangle r, string glyph, bool pressed = false)
+        {
+            using (SolidBrush b = new SolidBrush(Color.FromArgb(192, 192, 192)))
+                g.FillRectangle(b, r);
+
+            if (pressed)
+            {
+                using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                {
+                    g.DrawLine(pBlack, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pBlack, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                    g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                }
+            }
+            else
+            {
+                Draw3DRaised(g, r, 2);
+            }
+
+            int off = pressed ? 1 : 0;
+            using (Font f = new Font("Tahoma", 7.5f, FontStyle.Bold))
+            using (SolidBrush tb = new SolidBrush(Color.Black))
+            {
+                StringFormat sf = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                g.DrawString(glyph, f, tb, new Rectangle(r.X + off, r.Y + off - 1, r.Width, r.Height), sf);
+            }
         }
 
         private static GraphicsPath CreateRoundedRect(RectangleF r, float radius)
@@ -1056,42 +1076,41 @@ namespace OmniBattery.UI
                 sf.StartPosition = FormStartPosition.CenterParent;
                 sf.FormBorderStyle = FormBorderStyle.FixedDialog;
                 sf.MaximizeBox = false; sf.MinimizeBox = false;
-                sf.BackColor = Color.FromArgb(24, 27, 40);
-                sf.ForeColor = Color.White;
-                sf.Font = new Font("Segoe UI", 9f);
+                sf.BackColor = Color.FromArgb(192, 192, 192);
+                sf.ForeColor = Color.Black;
+                sf.Font = new Font("Tahoma", 8.5f);
 
                 int y = 20;
 
-                Label lbl1 = new Label { Text = I18n.T("RefreshIntervalLabel"), Location = new Point(20, y), AutoSize = true };
+                Label lbl1 = new Label { Text = I18n.T("RefreshIntervalLabel"), Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(lbl1); y += 24;
 
-                NumericUpDown numInt = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 3600, Value = _manager.Settings.RefreshIntervalSeconds, BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White };
+                NumericUpDown numInt = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 3600, Value = _manager.Settings.RefreshIntervalSeconds, BackColor = Color.White, ForeColor = Color.Black };
                 sf.Controls.Add(numInt); y += 34;
 
-                Label lbl2 = new Label { Text = I18n.T("LowBatteryThresholdLabel"), Location = new Point(20, y), AutoSize = true };
+                Label lbl2 = new Label { Text = I18n.T("LowBatteryThresholdLabel"), Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(lbl2); y += 24;
 
-                NumericUpDown numThr = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 50, Value = _manager.Settings.LowBatteryThreshold, BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White };
+                NumericUpDown numThr = new NumericUpDown { Location = new Point(20, y), Width = 110, Minimum = 5, Maximum = 50, Value = _manager.Settings.LowBatteryThreshold, BackColor = Color.White, ForeColor = Color.Black };
                 sf.Controls.Add(numThr); y += 34;
 
-                CheckBox chkNotif = new CheckBox { Text = I18n.T("EnableNotifLabel"), Checked = _manager.Settings.EnableNotifications, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkNotif = new CheckBox { Text = I18n.T("EnableNotifLabel"), Checked = _manager.Settings.EnableNotifications, Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(chkNotif); y += 28;
 
-                CheckBox chkBoot = new CheckBox { Text = I18n.T("StartWithWinLabel"), Checked = _manager.Settings.StartWithWindows, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkBoot = new CheckBox { Text = I18n.T("StartWithWinLabel"), Checked = _manager.Settings.StartWithWindows, Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(chkBoot); y += 28;
 
-                CheckBox chkSys = new CheckBox { Text = I18n.T("ShowSysBatLabel"), Checked = _manager.Settings.ShowSystemBattery, Location = new Point(20, y), AutoSize = true };
+                CheckBox chkSys = new CheckBox { Text = I18n.T("ShowSysBatLabel"), Checked = _manager.Settings.ShowSystemBattery, Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(chkSys); y += 32;
 
-                Label lblStyle = new Label { Text = I18n.T("TrayStyleLabel"), Location = new Point(20, y), AutoSize = true };
+                Label lblStyle = new Label { Text = I18n.T("TrayStyleLabel"), Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(lblStyle); y += 24;
 
                 ComboBox cmbStyle = new ComboBox
                 {
                     Location = new Point(20, y), Width = 260,
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White
+                    BackColor = Color.White, ForeColor = Color.Black
                 };
                 TrayIconStyle[] styles = (TrayIconStyle[])Enum.GetValues(typeof(TrayIconStyle));
                 foreach (TrayIconStyle st in styles)
@@ -1100,15 +1119,14 @@ namespace OmniBattery.UI
                 sf.Controls.Add(cmbStyle); y += 36;
 
                 // Language selector
-                Label lblLang = new Label { Text = I18n.T("LanguageLabel"), Location = new Point(20, y), AutoSize = true };
+                Label lblLang = new Label { Text = I18n.T("LanguageLabel"), Location = new Point(20, y), AutoSize = true, ForeColor = Color.Black };
                 sf.Controls.Add(lblLang); y += 24;
 
                 ComboBox cmbLang = new ComboBox
                 {
                     Location = new Point(20, y), Width = 260,
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(36, 40, 60), ForeColor = Color.White
+                    BackColor = Color.White, ForeColor = Color.Black
                 };
                 cmbLang.Items.Add("Português (PT)");
                 cmbLang.Items.Add("English (EN)");
@@ -1120,24 +1138,24 @@ namespace OmniBattery.UI
                 Label lblVersion = new Label
                 {
                     Text = I18n.T("AppVersionLabel", AppSettings.AppVersion),
-                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(0, 205, 255),
+                    Font = new Font("Tahoma", 9f, FontStyle.Bold),
+                    ForeColor = Color.DarkBlue,
                     Location = new Point(20, y),
                     AutoSize = true
                 };
                 sf.Controls.Add(lblVersion); y += 24;
 
                 // Check updates button
-                AeroGlassButton btnCheckUpdate = CreateStyledButton(I18n.T("CheckUpdatesBtn"), Color.FromArgb(38, 48, 75));
+                AeroGlassButton btnCheckUpdate = CreateStyledButton(I18n.T("CheckUpdatesBtn"), Color.FromArgb(192, 192, 192));
                 btnCheckUpdate.Location = new Point(20, y);
-                btnCheckUpdate.Size = new Size(260, 32);
-                sf.Controls.Add(btnCheckUpdate); y += 36;
+                btnCheckUpdate.Size = new Size(260, 26);
+                sf.Controls.Add(btnCheckUpdate); y += 32;
 
                 Label lblUpdateStatus = new Label
                 {
                     Text = "",
-                    Font = new Font("Segoe UI", 8f),
-                    ForeColor = Color.FromArgb(160, 165, 195),
+                    Font = new Font("Tahoma", 8f),
+                    ForeColor = Color.Black,
                     Location = new Point(20, y),
                     Size = new Size(380, 20)
                 };
@@ -1247,8 +1265,8 @@ namespace OmniBattery.UI
                     });
                 };
 
-                AeroGlassButton btnSave = CreateStyledButton(I18n.T("BtnSave"), Color.FromArgb(88, 101, 242));
-                btnSave.Location = new Point(190, y); btnSave.Size = new Size(95, 32);
+                AeroGlassButton btnSave = CreateStyledButton(I18n.T("BtnSave"), Color.FromArgb(192, 192, 192));
+                btnSave.Location = new Point(190, y); btnSave.Size = new Size(95, 26);
                 btnSave.Click += delegate
                 {
                     _manager.Settings.RefreshIntervalSeconds = (int)numInt.Value;
@@ -1273,8 +1291,8 @@ namespace OmniBattery.UI
                 };
                 sf.Controls.Add(btnSave);
 
-                AeroGlassButton btnCancel = CreateStyledButton(I18n.T("BtnCancel"), Color.FromArgb(42, 48, 70));
-                btnCancel.Location = new Point(295, y); btnCancel.Size = new Size(95, 32);
+                AeroGlassButton btnCancel = CreateStyledButton(I18n.T("BtnCancel"), Color.FromArgb(192, 192, 192));
+                btnCancel.Location = new Point(295, y); btnCancel.Size = new Size(95, 26);
                 btnCancel.Click += delegate { sf.Close(); };
                 sf.Controls.Add(btnCancel);
 
@@ -1288,10 +1306,11 @@ namespace OmniBattery.UI
             AeroGlassButton btn = new AeroGlassButton
             {
                 Text = text,
-                BaseGlassColor = bg,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
-                CornerRadius = 8
+                BaseGlassColor = Color.FromArgb(192, 192, 192),
+                ForeColor = Color.Black,
+                Font = new Font("Tahoma", 8.25f, FontStyle.Regular),
+                Classic3D = true,
+                CornerRadius = 0
             };
             return btn;
         }
@@ -1357,25 +1376,21 @@ namespace OmniBattery.UI
 
                 if (BgImage != null)
                 {
-                    g.Clear(Color.FromArgb(14, 16, 26));
+                    g.Clear(Color.FromArgb(192, 192, 192));
                     try
                     {
                         g.DrawImage(BgImage, clip);
                         int alpha = Math.Min(255, Math.Max(0, (int)(BgOpacity * 2.55)));
-                        using (SolidBrush tint = new SolidBrush(Color.FromArgb(alpha, 14, 16, 26)))
+                        using (SolidBrush tint = new SolidBrush(Color.FromArgb(alpha, 192, 192, 192)))
                             g.FillRectangle(tint, clip);
                     }
                     catch { }
                 }
                 else
                 {
-                    using (LinearGradientBrush lgb = new LinearGradientBrush(
-                        clip,
-                        Color.FromArgb(13, 15, 24),
-                        Color.FromArgb(19, 22, 35),
-                        LinearGradientMode.Vertical))
+                    using (SolidBrush gb = new SolidBrush(Color.FromArgb(192, 192, 192)))
                     {
-                        g.FillRectangle(lgb, clip);
+                        g.FillRectangle(gb, clip);
                     }
                 }
             }

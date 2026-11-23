@@ -199,214 +199,170 @@ namespace OmniBattery.UI
         {
             base.OnPaint(e);
             Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.SmoothingMode = SmoothingMode.None; // Pixel-sharp retro aesthetic
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle cardRect = new Rectangle(5, 5, Width - 10, Height - 10);
-            Color effectiveColor = _device != null ? _device.GetEffectiveColor() : Color.FromArgb(88, 101, 242);
+            Color cGrey = Color.FromArgb(192, 192, 192);
+            Rectangle cardRect = new Rectangle(0, 0, Width - 1, Height - 1);
+            Color effectiveColor = _device != null ? _device.GetEffectiveColor() : Color.FromArgb(0, 240, 255);
             bool isConn = _device != null && _device.IsConnected;
 
-            // 1. Halo / Brilho Neon Atmosférico Radiante (mesmo estilo da imagem de referência)
-            if (isConn)
-            {
-                int red = effectiveColor.R;
-                int green = effectiveColor.G;
-                int blue = effectiveColor.B;
-                int baseAlpha = _isHovered ? 12 : 7;
-
-                for (int i = 5; i >= 1; i--)
-                {
-                    Rectangle glowR = new Rectangle(cardRect.X - i, cardRect.Y - i, cardRect.Width + (i * 2), cardRect.Height + (i * 2));
-                    using (GraphicsPath gp = RoundedRect(glowR, 16 + i))
-                    using (Pen gpPen = new Pen(Color.FromArgb(baseAlpha * (6 - i), red, green, blue), 2f))
-                    {
-                        g.DrawPath(gpPen, gp);
-                    }
-                }
-            }
-
-            // 2. Fundo Translúcido Vítreo e Borda Neon com Brilho
-            using (GraphicsPath path = RoundedRect(cardRect, 16))
-            {
-                Color bgTop = !isConn ? Color.FromArgb(20, 22, 32) : Color.FromArgb(220, 22, 26, 40);
-                Color bgBot = !isConn ? Color.FromArgb(14, 15, 22) : Color.FromArgb(240, 14, 16, 26);
-
-                using (LinearGradientBrush b = new LinearGradientBrush(cardRect, bgTop, bgBot, 90f))
-                    g.FillPath(b, path);
-
-                Color borderColor = !isConn
-                    ? (_isHovered ? Color.FromArgb(70, 75, 100) : Color.FromArgb(42, 46, 68))
-                    : Color.FromArgb(_isHovered ? 240 : 170, effectiveColor);
-
-                using (Pen p = new Pen(borderColor, 1.2f))
-                    g.DrawPath(p, path);
-            }
+            // 1. Fundo cinza clássico e Borda 3D em relevo (Raised Bevel)
+            using (SolidBrush b = new SolidBrush(cGrey))
+                g.FillRectangle(b, cardRect);
+            Draw3DRaised(g, cardRect, 2);
 
             if (_device == null) return;
 
-            // ── 3. Ícone em Squircle Neon (Superior Esquerdo) ─────────────────
-            int iconSz = 42;
-            _iconCircleRect = new Rectangle(cardRect.X + 14, cardRect.Y + 14, iconSz, iconSz);
+            // ── 2. Topo Direito: Botão Fechar [x] e Status [Ícone Ligado] ─────
+            _btnHideRect = new Rectangle(cardRect.Right - 16, cardRect.Top + 6, 12, 12);
+            DrawClassicButton(g, _btnHideRect, "x", _isHideHovered, false);
 
-            Color circleColor = isConn ? effectiveColor : Color.FromArgb(100, 105, 130);
-            using (GraphicsPath ip = RoundedRect(_iconCircleRect, 10))
-            {
-                using (SolidBrush ib = new SolidBrush(Color.FromArgb(isConn ? 28 : 16, circleColor)))
-                    g.FillPath(ib, ip);
-                using (Pen ipen = new Pen(Color.FromArgb(_isIconHovered ? 240 : (isConn ? 160 : 60), circleColor), 1.2f))
-                    g.DrawPath(ipen, ip);
-            }
-
-            IconRenderer.DrawDeviceIcon(g, _iconCircleRect,
-                _device.EffectiveCategory, circleColor, _device.CustomIconPath);
-
-            // ── 4. Botões Superiores Direitos: [● Ícone Ligado] e [✕] ───────────
-            int btnY = cardRect.Y + 13;
-            int btnH = 20;
-            int btnStatusW = 88;
-            _btnStatusRect = new Rectangle(cardRect.Right - btnStatusW - 22, btnY, btnStatusW, btnH);
-            _btnHideRect   = new Rectangle(cardRect.Right - 18, btnY, 16, btnH);
+            int btnStatusW = 78;
+            int btnStatusH = 16;
+            _btnStatusRect = new Rectangle(_btnHideRect.Left - btnStatusW - 4, cardRect.Top + 6, btnStatusW, btnStatusH);
 
             bool trayOn = _device.IsTrayIconEnabled;
             string statusLabel = trayOn ? I18n.T("IconOn") : I18n.T("IconOff");
-            Color statusColor = trayOn ? Color.FromArgb(0, 230, 118) : Color.FromArgb(140, 145, 170);
-            DrawStatusButton(g, _btnStatusRect, statusLabel, _isStatusHovered, statusColor, trayOn);
+            string cleanLabel = statusLabel.TrimStart('●', '○', ' ').Trim();
 
-            // Botão Fechar / Ocultar [✕]
-            using (Font xf = new Font("Segoe UI", 10f, FontStyle.Bold))
+            // Pílula / Caixa verde clássica com contorno preto fino
+            Color stBg = trayOn ? Color.FromArgb(34, 197, 94) : Color.FromArgb(180, 180, 180);
+            using (SolidBrush sb = new SolidBrush(stBg))
+                g.FillRectangle(sb, _btnStatusRect);
+            using (Pen sp = new Pen(Color.Black, 1f))
+                g.DrawRectangle(sp, _btnStatusRect);
+
+            using (Font stFont = new Font("Tahoma", 7.5f, FontStyle.Regular))
+            using (SolidBrush tb = new SolidBrush(Color.Black))
             {
-                Color xc = _isHideHovered ? Color.FromArgb(255, 95, 95) : Color.FromArgb(110, 115, 140);
-                g.DrawString("✕", xf, new SolidBrush(xc), _btnHideRect.X + 1, _btnHideRect.Y + 1);
+                StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(cleanLabel, stFont, tb, _btnStatusRect, sf);
             }
 
-            // ── 5. Nome do Dispositivo ──────────────────────────────────────────
-            int txtLeft = cardRect.X + 64;
-            Rectangle nameRect = new Rectangle(txtLeft, cardRect.Y + 12, cardRect.Width - 64 - btnStatusW - 28, 22);
-            using (Font nf = new Font("Segoe UI", 11.2f, FontStyle.Bold))
+            // ── 3. Ícone em Caixa Rebaixada (Sunken 3D Box) ────────────────────
+            int iconSz = 40;
+            _iconCircleRect = new Rectangle(cardRect.X + 8, cardRect.Y + 8, iconSz, iconSz);
+            using (SolidBrush ib = new SolidBrush(cGrey))
+                g.FillRectangle(ib, _iconCircleRect);
+            Draw3DSunken(g, _iconCircleRect);
+
+            IconRenderer.DrawDeviceIcon(g, _iconCircleRect,
+                _device.EffectiveCategory, Color.Black, _device.CustomIconPath);
+
+            // ── 4. Nome do Dispositivo ──────────────────────────────────────────
+            int txtLeft = cardRect.X + 54;
+            Rectangle nameRect = new Rectangle(txtLeft, cardRect.Y + 7, _btnStatusRect.Left - txtLeft - 4, 18);
+            using (Font nf = new Font("Tahoma", 10f, FontStyle.Bold))
             {
                 StringFormat sf = new StringFormat
                 {
                     Trimming = StringTrimming.EllipsisCharacter,
                     FormatFlags = StringFormatFlags.NoWrap
                 };
-                Color nameColor = isConn ? Color.White : Color.FromArgb(150, 155, 175);
+                Color nameColor = isConn ? Color.Black : Color.FromArgb(100, 100, 100);
                 using (SolidBrush nb = new SolidBrush(nameColor))
                     g.DrawString(_device.Name, nf, nb, nameRect, sf);
             }
 
-            // ── 6. Segunda Linha: Chip de Protocolo + Botões [Ícone] e [Cor] ───
-            int row2Y = cardRect.Y + 38;
-            int curX = txtLeft;
+            // ── 5. Segunda Linha: Protocolo e Botões [Ícone] e [Cor] ───────────
+            int row2Y = cardRect.Y + 26;
             string proto = _device.Protocol;
-            using (Font pf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
+            using (Font pf = new Font("Tahoma", 7.5f, FontStyle.Regular))
             {
-                SizeF ps = g.MeasureString(proto, pf);
-                int badgeW = Math.Min(115, (int)ps.Width + 10);
-                Rectangle badge = new Rectangle(curX, row2Y, badgeW, 19);
-                using (GraphicsPath bp = RoundedRect(badge, 5))
+                Rectangle protoRect = new Rectangle(txtLeft, row2Y + 2, 115, 16);
+                StringFormat psf = new StringFormat
                 {
-                    using (SolidBrush bb = new SolidBrush(Color.FromArgb(28, 32, 48)))
-                        g.FillPath(bb, bp);
-                    using (Pen bpen = new Pen(Color.FromArgb(50, 58, 86), 1f))
-                        g.DrawPath(bpen, bp);
-
-                    StringFormat bsf = new StringFormat
-                    {
-                        Trimming = StringTrimming.EllipsisCharacter,
-                        FormatFlags = StringFormatFlags.NoWrap
-                    };
-                    Rectangle textR = new Rectangle(badge.X + 5, badge.Y + 3, badge.Width - 8, badge.Height - 4);
-                    g.DrawString(proto, pf, new SolidBrush(Color.FromArgb(170, 180, 210)), textR, bsf);
-                }
-                curX += badgeW + 6;
+                    Trimming = StringTrimming.EllipsisCharacter,
+                    FormatFlags = StringFormatFlags.NoWrap
+                };
+                g.DrawString(proto, pf, Brushes.Black, protoRect, psf);
             }
 
-            // Botões rápidos de Ícone e Cor com micro-cápsula moderna
+            // Botões clássicos 3D de Ícone e Cor
+            int bLeft = cardRect.Left + 175;
             string iconBtnText = I18n.T("BtnIcon");
             string colorBtnText = I18n.T("BtnColor");
-            using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
-            {
-                _btnIconRect  = new Rectangle(curX, row2Y, 44, 19);
-                _btnColorRect = new Rectangle(_btnIconRect.Right + 6, row2Y, 46, 19);
-            }
-            DrawSmallButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  effectiveColor, false);
-            DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
-            // ── 7. Tubo de Laser / Barra Neon Brilhante & Porcentagem ──────────
+            _btnIconRect  = new Rectangle(bLeft, row2Y, 44, 18);
+            _btnColorRect = new Rectangle(_btnIconRect.Right + 5, row2Y, 46, 18);
+
+            DrawClassicButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  false);
+            DrawClassicButton(g, _btnColorRect, " " + colorBtnText, _isColorHovered, false);
+            // Bolinha colorida dentro do botão de cor
+            using (SolidBrush cb = new SolidBrush(effectiveColor))
+            {
+                g.FillEllipse(cb, _btnColorRect.X + 6, _btnColorRect.Y + 5, 7, 7);
+                g.DrawEllipse(Pens.Black, _btnColorRect.X + 6, _btnColorRect.Y + 5, 7, 7);
+            }
+
+            // ── 6. Barra de Bateria Estilo Medidor de LED / VU-Meter Retro ─────
+            int barX = cardRect.X + 8;
+            int barY = cardRect.Y + 56;
+            int barW = cardRect.Width - 92;
+            int barH = 25;
+            Rectangle gaugeRect = new Rectangle(barX, barY, barW, barH);
+
+            // Canaleta preta rebaixada clássica
+            using (SolidBrush b = new SolidBrush(Color.Black))
+                g.FillRectangle(b, gaugeRect);
+            Draw3DSunken(g, gaugeRect);
+
             if (!_device.IsWired)
             {
-                int barX = cardRect.X + 14;
-                int barY = cardRect.Y + 84;
-                int barW = cardRect.Width - 14 - 84;
-                int barH = 11;
-
-                // Canaleta escura de fundo
-                Rectangle barTrack = new Rectangle(barX, barY, barW, barH);
-                using (GraphicsPath btp = RoundedRect(barTrack, 5))
-                {
-                    using (SolidBrush btb = new SolidBrush(Color.FromArgb(14, 16, 26))) g.FillPath(btb, btp);
-                    using (Pen btpen = new Pen(Color.FromArgb(34, 40, 60), 1f)) g.DrawPath(btpen, btp);
-                }
-
                 if (isConn && _device.BatteryPercent > 0)
                 {
-                    int fillW = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
-                    Rectangle barFill = new Rectangle(barX, barY, fillW, barH);
+                    // Blocos discretos de LED com separação de 2px
+                    int totalBlocks = 16;
+                    int activeBlocks = (int)Math.Round(totalBlocks * (Math.Min(100, _device.BatteryPercent) / 100.0));
+                    int pad = 2;
+                    int innerW = barW - (pad * 2);
+                    int innerH = barH - (pad * 2);
+                    float blockW = (innerW - ((totalBlocks - 1) * 2f)) / totalBlocks;
 
-                    // Halo neon difuso brilhante ao redor do tubo preenchido
-                    int red = effectiveColor.R;
-                    int green = effectiveColor.G;
-                    int blue = effectiveColor.B;
-                    for (int i = 4; i >= 1; i--)
+                    for (int bIdx = 0; bIdx < totalBlocks; bIdx++)
                     {
-                        Rectangle tg = new Rectangle(barX - i, barY - i, fillW + (i * 2), barH + (i * 2));
-                        using (GraphicsPath tgp = RoundedRect(tg, (barH + (i * 2)) / 2))
-                        using (SolidBrush tgb = new SolidBrush(Color.FromArgb(22 * (5 - i), red, green, blue)))
+                        float bx = barX + pad + bIdx * (blockW + 2f);
+                        float by = barY + pad;
+                        RectangleF bRect = new RectangleF(bx, by, blockW, innerH);
+
+                        if (bIdx < activeBlocks)
                         {
-                            g.FillPath(tgb, tgp);
+                            using (SolidBrush sb = new SolidBrush(effectiveColor))
+                                g.FillRectangle(sb, bRect);
                         }
-                    }
-
-                    // Núcleo do tubo neon radiante
-                    using (GraphicsPath fp = RoundedRect(barFill, 5))
-                    {
-                        using (SolidBrush fb = new SolidBrush(effectiveColor))
-                            g.FillPath(fb, fp);
-
-                        // Linha de reflexo especular de laser no topo do tubo
-                        Rectangle coreRect = new Rectangle(barX + 2, barY + 2, fillW - 4, 3);
-                        if (coreRect.Width > 4)
+                        else
                         {
-                            using (GraphicsPath coreP = RoundedRect(coreRect, 1))
-                            using (SolidBrush coreB = new SolidBrush(Color.FromArgb(225, 255, 255, 255)))
-                            {
-                                g.FillPath(coreB, coreP);
-                            }
+                            using (SolidBrush sb = new SolidBrush(Color.FromArgb(20, 20, 20)))
+                                g.FillRectangle(sb, bRect);
                         }
                     }
                 }
 
-                // Porcentagem da bateria em 20pt Bold na cor do dispositivo
+                // Porcentagem da bateria em 19pt Bold preto
                 string pct = _device.GetFormattedPercentage();
                 if (!string.IsNullOrEmpty(pct))
                 {
-                    using (Font pctFont = new Font("Segoe UI", 20f, FontStyle.Bold))
+                    using (Font pctFont = new Font("Tahoma", 19f, FontStyle.Bold))
                     {
-                        g.DrawString(pct, pctFont, new SolidBrush(isConn ? effectiveColor : Color.FromArgb(120, 125, 145)), cardRect.Right - 76, cardRect.Y + 68);
+                        g.DrawString(pct, pctFont, Brushes.Black, cardRect.Right - 78, cardRect.Y + 52);
                     }
                 }
             }
             else
             {
-                // Dispositivo com fio: Linha de aviso moderna em ciano elétrico
-                int barX = cardRect.X + 14, barY = cardRect.Y + 84;
-                using (Font wf = new Font("Segoe UI", 8.8f, FontStyle.Bold))
+                // Dispositivo com fio: bloco azul/ciano
+                using (Font wf = new Font("Tahoma", 8.8f, FontStyle.Bold))
                 {
-                    g.DrawString("⚡ " + I18n.T("WiredDeviceNotice"), wf, new SolidBrush(Color.FromArgb(100, 195, 255)), barX, barY);
+                    g.DrawString("⚡ " + I18n.T("WiredDeviceNotice"), wf, Brushes.Cyan, barX + 6, barY + 5);
+                }
+                using (Font pctFont = new Font("Tahoma", 17f, FontStyle.Bold))
+                {
+                    g.DrawString("USB", pctFont, Brushes.Black, cardRect.Right - 76, cardRect.Y + 53);
                 }
             }
 
-            // ── 8. Informações do Rodapé do Card ──────────────────────────────
+            // ── 7. Informações do Rodapé do Card ──────────────────────────────
             string info;
             if (!isConn)
             {
@@ -428,104 +384,98 @@ namespace OmniBattery.UI
                     : string.Format("{0}  •  {1}", sub, updatedText);
             }
 
-            using (Font inf = new Font("Segoe UI", 7.6f))
+            using (Font inf = new Font("Tahoma", 7.5f, FontStyle.Regular))
             {
-                Color infoColor = isConn ? Color.FromArgb(125, 132, 155) : Color.FromArgb(90, 95, 115);
-                g.DrawString(info, inf, new SolidBrush(infoColor), cardRect.X + 14, cardRect.Y + 112);
+                Color infoColor = isConn ? Color.Black : Color.FromArgb(100, 100, 100);
+                using (SolidBrush ib = new SolidBrush(infoColor))
+                    g.DrawString(info, inf, ib, cardRect.X + 8, cardRect.Bottom - 18);
             }
         }
 
-        private void DrawSmallButton(Graphics g, Rectangle r, string label, bool hovered, Color accent, bool showDot)
+        private static void Draw3DRaised(Graphics g, Rectangle r, int depth = 2)
         {
-            using (GraphicsPath p = RoundedRect(r, 6))
+            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
             {
-                Color bgTop = hovered ? Color.FromArgb(50, 58, 88) : Color.FromArgb(28, 34, 52);
-                Color bgBottom = hovered ? Color.FromArgb(38, 44, 68) : Color.FromArgb(20, 24, 38);
-                using (LinearGradientBrush b = new LinearGradientBrush(r, bgTop, bgBottom, 90f))
-                    g.FillPath(b, p);
-
-                using (Pen pen = new Pen(Color.FromArgb(hovered ? 120 : 45, 255, 255, 255), 1f))
-                    g.DrawPath(pen, p);
-            }
-
-            using (Font bf = new Font("Segoe UI", 7.2f, FontStyle.Bold))
-            {
-                if (showDot)
+                if (depth == 1)
                 {
-                    using (SolidBrush db = new SolidBrush(accent))
-                        g.FillEllipse(db, r.X + 6, r.Y + 6, 7, 7);
-
-                    g.DrawString(label, bf, Brushes.White, r.X + 17, r.Y + 3);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
                 }
                 else
                 {
-                    SizeF s = g.MeasureString(label, bf);
-                    float tx = r.X + (r.Width - s.Width) / 2f;
-                    g.DrawString(label, bf, Brushes.White, tx, r.Y + 3);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pDark, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                    g.DrawLine(pDark, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
                 }
             }
         }
 
-        private void DrawStatusButton(Graphics g, Rectangle r, string label, bool hovered, Color statusColor, bool isConnected)
+        private static void Draw3DSunken(Graphics g, Rectangle r)
         {
-            using (GraphicsPath p = RoundedRect(r, 7))
+            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
             {
-                Color bgTop = isConnected
-                    ? (hovered ? Color.FromArgb(34, 75, 52) : Color.FromArgb(24, 55, 38))
-                    : (hovered ? Color.FromArgb(55, 60, 80) : Color.FromArgb(38, 42, 60));
-                Color bgBottom = isConnected
-                    ? (hovered ? Color.FromArgb(22, 50, 34) : Color.FromArgb(16, 38, 26))
-                    : (hovered ? Color.FromArgb(42, 46, 64) : Color.FromArgb(28, 31, 46));
+                g.DrawLine(pDark, r.Left, r.Top, r.Right - 1, r.Top);
+                g.DrawLine(pDark, r.Left, r.Top, r.Left, r.Bottom - 1);
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
 
-                using (LinearGradientBrush b = new LinearGradientBrush(r, bgTop, bgBottom, 90f))
-                    g.FillPath(b, p);
-
-                Color borderC = isConnected
-                    ? Color.FromArgb(hovered ? 240 : 160, 0, 230, 118)
-                    : Color.FromArgb(hovered ? 150 : 80, 255, 255, 255);
-                using (Pen pen = new Pen(borderC, 1f))
-                    g.DrawPath(pen, p);
+                g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pLight, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                g.DrawLine(pLight, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
             }
+        }
 
-            // Remove quaisquer marcadores existentes na string para evitar bola verde duplicada
-            string cleanLabel = label.TrimStart('●', '○', ' ').Trim();
+        private static void DrawClassicButton(Graphics g, Rectangle r, string text, bool pressed = false, bool focused = false)
+        {
+            using (SolidBrush b = new SolidBrush(Color.FromArgb(192, 192, 192)))
+                g.FillRectangle(b, r);
 
-            // Apenas UMA bola LED limpa indicadora
-            if (isConnected)
+            if (pressed)
             {
-                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(0, 230, 118)))
-                    g.FillEllipse(dotB, r.X + 8, r.Y + 8, 7, 7);
+                using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
+                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
+                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                {
+                    g.DrawLine(pBlack, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pBlack, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                    g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                }
             }
             else
             {
-                using (SolidBrush dotB = new SolidBrush(Color.FromArgb(140, 145, 170)))
-                    g.FillEllipse(dotB, r.X + 8, r.Y + 8, 7, 7);
+                Draw3DRaised(g, r, 2);
             }
 
-            using (Font f = new Font("Segoe UI", 7.6f, FontStyle.Bold))
+            int off = pressed ? 1 : 0;
+            using (Font f = new Font("Tahoma", 7.5f, FontStyle.Regular))
+            using (SolidBrush tb = new SolidBrush(Color.Black))
             {
-                int textX = r.X + 20;
-                using (SolidBrush tb = new SolidBrush(statusColor))
+                StringFormat sf = new StringFormat
                 {
-                    g.DrawString(cleanLabel, f, tb, textX, r.Y + 4);
-                }
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                g.DrawString(text, f, tb, new Rectangle(r.X + off, r.Y + off, r.Width, r.Height), sf);
             }
-        }
-
-        private static GraphicsPath RoundedRect(Rectangle rect, int radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            int d = radius * 2;
-            Rectangle arc = new Rectangle(rect.Location, new Size(d, d));
-            path.AddArc(arc, 180, 90);
-            arc.X = rect.Right - d;
-            path.AddArc(arc, 270, 90);
-            arc.Y = rect.Bottom - d;
-            path.AddArc(arc, 0, 90);
-            arc.X = rect.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
         }
     }
 }
