@@ -339,12 +339,12 @@ namespace OmniBattery.UI
                     // Segmented Battery (image 2 reference)
                     int batX = curX + 46;
                     int batY = 16;
-                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 48, 20), dev.BatteryPercent, dev.IsCharging, effCol);
+                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 48, 20), dev.BatteryPercent, dev.IsCharging, effCol, dev.IsWired);
 
                     // Percentage
                     using (Font pf = new Font("Segoe UI", 12f, FontStyle.Bold))
                     {
-                        string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                        string pct = dev.IsWired ? "USB" : (dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--");
                         g.DrawString(pct, pf, new SolidBrush(effCol), batX + 54, batY - 1);
                     }
 
@@ -392,12 +392,12 @@ namespace OmniBattery.UI
                     // Segmented Battery
                     int batX = 58;
                     int batY = curY + 7;
-                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 44, 18), dev.BatteryPercent, dev.IsCharging, effCol);
+                    DrawSegmentedBattery(g, new Rectangle(batX, batY, 44, 18), dev.BatteryPercent, dev.IsCharging, effCol, dev.IsWired);
 
                     // Percentage
                     using (Font pf = new Font("Segoe UI", 11f, FontStyle.Bold))
                     {
-                        string pct = dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--";
+                        string pct = dev.IsWired ? "USB" : (dev.BatteryPercent >= 0 ? dev.BatteryPercent + "%" : "--");
                         g.DrawString(pct, pf, new SolidBrush(effCol), batX + 49, batY - 1);
                     }
 
@@ -414,7 +414,7 @@ namespace OmniBattery.UI
             }
         }
 
-        public static void DrawSegmentedBattery(Graphics g, Rectangle r, int percent, bool isCharging, Color fillCol)
+        public static void DrawSegmentedBattery(Graphics g, Rectangle r, int percent, bool isCharging, Color fillCol, bool isWired = false)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
@@ -452,7 +452,11 @@ namespace OmniBattery.UI
             int segW = (innerW - (totalSegments - 1) * segSpacing) / totalSegments;
 
             int activeSegments = 0;
-            if (percent > 0)
+            if (isWired)
+            {
+                activeSegments = totalSegments;
+            }
+            else if (percent > 0)
             {
                 activeSegments = (int)Math.Round((Math.Min(100, percent) / 100.0) * totalSegments);
                 if (activeSegments == 0 && percent > 0) activeSegments = 1;

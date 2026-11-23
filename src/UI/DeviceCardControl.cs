@@ -296,7 +296,7 @@ namespace OmniBattery.UI
             DrawSmallButton(g, _btnColorRect, colorBtnText, _isColorHovered, effectiveColor, true);
 
             // ── Percentage / Status ──────────────────────────────────────────
-            string pct = _device.GetFormattedPercentage();
+            string pct = _device.IsWired ? I18n.T("WiredUsbBadge") : _device.GetFormattedPercentage();
             using (Font pctF = new Font("Segoe UI", isConn ? 17f : 14f, FontStyle.Bold))
             {
                 SizeF pctSz = g.MeasureString(pct, pctF);
@@ -314,14 +314,24 @@ namespace OmniBattery.UI
             using (SolidBrush bgB = new SolidBrush(isConn ? Color.FromArgb(42, 46, 68) : Color.FromArgb(28, 30, 44)))
                 g.FillPath(bgB, bgP);
 
-            if (isConn && _device.BatteryPercent > 0)
+            if (isConn && (_device.IsWired || _device.BatteryPercent > 0))
             {
-                int fill = Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
+                int fill = _device.IsWired
+                    ? barW
+                    : Math.Max(barH, (int)(barW * (Math.Min(100, _device.BatteryPercent) / 100.0)));
                 Rectangle barFill = new Rectangle(barX, barY, fill, barH);
                 using (GraphicsPath fp = RoundedRect(barFill, 5))
                 {
-                    using (SolidBrush fb = new SolidBrush(effectiveColor))
-                        g.FillPath(fb, fp);
+                    if (_device.IsWired)
+                    {
+                        using (LinearGradientBrush usbB = new LinearGradientBrush(barFill, Color.FromArgb(0, 205, 255), Color.FromArgb(0, 140, 240), 0f))
+                            g.FillPath(usbB, fp);
+                    }
+                    else
+                    {
+                        using (SolidBrush fb = new SolidBrush(effectiveColor))
+                            g.FillPath(fb, fp);
+                    }
 
                     // Upper gloss shine
                     Rectangle barShine = new Rectangle(barX, barY, fill, 4);
@@ -340,9 +350,13 @@ namespace OmniBattery.UI
             }
             else
             {
-                string sub = (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio")
-                    ? I18n.T("WirelessSubtitle")
-                    : _device.Subtitle;
+                string sub;
+                if (_device.IsWired)
+                    sub = I18n.T("WiredDeviceSubtitle");
+                else if (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio")
+                    sub = I18n.T("WirelessSubtitle");
+                else
+                    sub = _device.Subtitle;
 
                 string updatedText = I18n.T("UpdatedAgo", _device.LastUpdated);
                 info = _device.Voltage > 0

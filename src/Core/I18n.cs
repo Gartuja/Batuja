@@ -111,6 +111,8 @@ namespace OmniBattery.Core
             Reg("UsbActive", "Receptor 2.4GHz USB Ativo", "Active 2.4GHz USB Receiver", "Receptor USB 2.4GHz Activo");
             Reg("BtActive", "Bluetooth Conectado", "Bluetooth Connected", "Bluetooth Conectado");
             Reg("WirelessSubtitle", "Sem fio", "Wireless", "Inalámbrico");
+            Reg("WiredDeviceSubtitle", "Dispositivo USB (Com Fio)", "Wired USB Device", "Dispositivo USB (Con Cable)");
+            Reg("WiredUsbBadge", "USB", "USB", "USB");
             Reg("VoltageLabel", "Tensão: {0:F2}V", "Voltage: {0:F2}V", "Voltaje: {0:F2}V");
             Reg("OverlayNoDevices", "Batuja: Nenhum dispositivo sem fio ligado", "Batuja: No wireless devices turned on", "Batuja: Ningún dispositivo inalámbrico encendido");
 
@@ -150,6 +152,13 @@ namespace OmniBattery.Core
             Reg("BtnSave", "Salvar", "Save", "Guardar");
             Reg("BtnCancel", "Cancelar", "Cancel", "Cancelar");
             Reg("MinToTrayOnClose", "Minimizar para a bandeja ao fechar", "Minimize to tray on close", "Minimizar a la bandeja al cerrar");
+            Reg("AppVersionLabel", "Versão do Batuja: {0}", "Batuja Version: {0}", "Versión de Batuja: {0}");
+            Reg("CheckUpdatesBtn", "Buscar Atualizações no GitHub", "Check for Updates on GitHub", "Buscar Actualizaciones en GitHub");
+            Reg("CheckingUpdates", "Buscando atualizações...", "Checking for updates...", "Buscando actualizaciones...");
+            Reg("UpdateTitle", "Atualizações do Batuja", "Batuja Updates", "Actualizaciones de Batuja");
+            Reg("UpdateAvailableMsg", "Uma nova versão ({0}) está disponível no GitHub!\nDeseja abrir a página de download agora?", "A new version ({0}) is available on GitHub!\nDo you want to open the download page now?", "¡Una nueva versión ({0}) está disponible en GitHub!\n¿Desea abrir la página de descarga ahora?");
+            Reg("UpdateLatestMsg", "Você já está utilizando a versão mais recente ({0}).", "You are already using the latest version ({0}).", "Ya estás utilizando la versión más reciente ({0}).");
+            Reg("UpdateErrorMsg", "Não foi possível verificar atualizações no momento.\nVerifique sua conexão à internet.", "Could not check for updates right now.\nPlease check your internet connection.", "No se pudo verificar actualizaciones en este momento.\nVerifique su conexión a internet.");
 
             // History Form
             Reg("HistoryTitle", "Batuja - Histórico de Dispositivos", "Batuja - Device History", "Batuja - Historial de Dispositivos");

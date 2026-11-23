@@ -142,7 +142,7 @@ namespace OmniBattery.UI
             Color effectiveColor = dev.GetEffectiveColor();
             SetIcon(icon, CreateNumericIcon(dev, effectiveColor));
 
-            string statusText = dev.IsCharging ? "[Carregando ⚡]" : (dev.IsConnected ? "[Conectado]" : "[Offline]");
+            string statusText = dev.IsWired ? "[USB]" : (dev.IsCharging ? "[Carregando ⚡]" : (dev.IsConnected ? "[Conectado]" : "[Offline]"));
             string tooltip = string.Format("{0}: {1} {2}",
                 dev.Name, dev.GetFormattedPercentage(), statusText);
 
@@ -335,8 +335,13 @@ namespace OmniBattery.UI
                     g.Clear(Color.Transparent);
 
                     string text = "ON";
-                    if (dev != null && dev.BatteryPercent >= 0)
-                        text = dev.BatteryPercent.ToString();
+                    if (dev != null)
+                    {
+                        if (dev.IsWired)
+                            text = "USB";
+                        else if (dev.BatteryPercent >= 0)
+                            text = dev.BatteryPercent.ToString();
+                    }
 
                     Rectangle bgRect = new Rectangle(1, 3, 30, 26);
 

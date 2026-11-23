@@ -34,6 +34,8 @@ namespace OmniBattery.Models
         public int BatteryPercent { get; set; } // 0 to 100, or -1 if unknown
         public bool IsCharging { get; set; }
         public bool IsConnected { get; set; }
+        public bool IsWired { get; set; }
+        public bool HasBattery { get; set; }
         public string Protocol { get; set; }
         public double Voltage { get; set; } // Volts, 0 if not available
         public DateTime LastUpdated { get; set; }
@@ -67,6 +69,8 @@ namespace OmniBattery.Models
         {
             BatteryPercent = -1;
             IsConnected = true;
+            IsWired = false;
+            HasBattery = true;
             LastUpdated = DateTime.Now;
             Category = DeviceCategory.Generico;
             Protocol = "Desconhecido";
@@ -82,6 +86,9 @@ namespace OmniBattery.Models
         {
             if (!IsConnected)
                 return Color.FromArgb(120, 120, 140); // Cinza
+
+            if (IsWired)
+                return Color.FromArgb(0, 205, 255); // Ciano Elétrico / USB Power
 
             if (IsCharging)
                 return Color.FromArgb(0, 210, 211); // Ciano / Azul Elétrico
@@ -113,6 +120,9 @@ namespace OmniBattery.Models
         {
             if (!IsConnected)
                 return "Desligado";
+
+            if (IsWired)
+                return "USB";
 
             if (BatteryPercent < 0)
                 return "Ativo";

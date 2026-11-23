@@ -434,12 +434,16 @@ namespace OmniBattery.Protocols
                 return null;
             }
 
-            // Se o receptor/dispositivo sem fio está conectado ao computador, garante presença na tela
+            // Determina se o dispositivo é sem fio (com bateria) ou com fio conectado via cabo USB
             bool isDevConnected = true;
+            bool isWired = false;
+            bool hasBattery = true;
+
             if (detectedBattery < 0)
             {
-                // Valor padrão ou estimado enquanto aguarda telemetria completa
-                detectedBattery = 90;
+                // Dispositivo USB com fio sem bateria (ex: teclado ou mouse USB convencional SinoWealth, etc.)
+                isWired = true;
+                hasBattery = false;
             }
 
             return new BatteryDevice
@@ -447,14 +451,16 @@ namespace OmniBattery.Protocols
                 Id = group.GroupKey,
                 Name = friendlyName,
                 Category = category,
-                BatteryPercent = detectedBattery,
+                BatteryPercent = hasBattery ? detectedBattery : -1,
                 IsCharging = isCharging,
                 IsConnected = isDevConnected,
-                Protocol = protocolName,
+                IsWired = isWired,
+                HasBattery = hasBattery,
+                Protocol = isWired ? "USB HID (Com Fio)" : protocolName,
                 Voltage = detectedVoltage,
                 LastUpdated = DateTime.Now,
-                Subtitle = "Receptor 2.4GHz USB Ativo",
-                Details = extraDetails
+                Subtitle = isWired ? "Dispositivo USB (Com Fio)" : "Receptor 2.4GHz USB Ativo",
+                Details = isWired ? "Alimentado continuamente via cabo USB (Sem bateria interna)" : extraDetails
             };
         }
 

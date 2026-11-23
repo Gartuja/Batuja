@@ -775,7 +775,7 @@ namespace OmniBattery.UI
             using (Form sf = new Form())
             {
                 sf.Text = I18n.T("SettingsTitle");
-                sf.Size = new Size(420, 560);
+                sf.Size = new Size(430, 540);
                 sf.StartPosition = FormStartPosition.CenterParent;
                 sf.FormBorderStyle = FormBorderStyle.FixedDialog;
                 sf.MaximizeBox = false; sf.MinimizeBox = false;
@@ -837,7 +837,93 @@ namespace OmniBattery.UI
                 cmbLang.Items.Add("English (EN)");
                 cmbLang.Items.Add("Español (ES)");
                 cmbLang.SelectedIndex = (int)_manager.Settings.Language;
-                sf.Controls.Add(cmbLang); y += 42;
+                sf.Controls.Add(cmbLang); y += 38;
+
+                // Version display
+                Label lblVersion = new Label
+                {
+                    Text = I18n.T("AppVersionLabel", AppSettings.AppVersion),
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(0, 205, 255),
+                    Location = new Point(20, y),
+                    AutoSize = true
+                };
+                sf.Controls.Add(lblVersion); y += 24;
+
+                // Check updates button
+                AeroGlassButton btnCheckUpdate = CreateStyledButton(I18n.T("CheckUpdatesBtn"), Color.FromArgb(38, 48, 75));
+                btnCheckUpdate.Location = new Point(20, y);
+                btnCheckUpdate.Size = new Size(260, 32);
+                sf.Controls.Add(btnCheckUpdate); y += 36;
+
+                Label lblUpdateStatus = new Label
+                {
+                    Text = "",
+                    Font = new Font("Segoe UI", 8f),
+                    ForeColor = Color.FromArgb(160, 165, 195),
+                    Location = new Point(20, y),
+                    Size = new Size(380, 20)
+                };
+                sf.Controls.Add(lblUpdateStatus); y += 26;
+
+                btnCheckUpdate.Click += delegate
+                {
+                    btnCheckUpdate.Enabled = false;
+                    lblUpdateStatus.Text = I18n.T("CheckingUpdates");
+                    System.Threading.ThreadPool.QueueUserWorkItem(delegate
+                    {
+                        try
+                        {
+                            System.Net.ServicePointManager.SecurityProtocol |= (System.Net.SecurityProtocolType)3072; // Tls12
+                            using (System.Net.WebClient wc = new System.Net.WebClient())
+                            {
+                                wc.Headers.Add("User-Agent", "Batuja-App");
+                                string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
+                                string tag = "";
+                                int tagIdx = json.IndexOf("\"tag_name\":");
+                                if (tagIdx >= 0)
+                                {
+                                    int startQuote = json.IndexOf('"', tagIdx + 11);
+                                    if (startQuote >= 0)
+                                    {
+                                        int endQuote = json.IndexOf('"', startQuote + 1);
+                                        if (endQuote > startQuote)
+                                        {
+                                            tag = json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                                        }
+                                    }
+                                }
+
+                                sf.BeginInvoke(new Action(delegate
+                                {
+                                    btnCheckUpdate.Enabled = true;
+                                    if (!string.IsNullOrEmpty(tag) && !tag.Equals(AppSettings.AppVersion, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        lblUpdateStatus.Text = string.Format("Nova versão disponível: {0}", tag);
+                                        if (MessageBox.Show(sf, I18n.T("UpdateAvailableMsg", tag), I18n.T("UpdateTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                                        {
+                                            try { Process.Start(AppSettings.GitHubRepoUrl + "/releases"); } catch { }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        lblUpdateStatus.Text = I18n.T("UpdateLatestMsg", AppSettings.AppVersion);
+                                        MessageBox.Show(sf, I18n.T("UpdateLatestMsg", AppSettings.AppVersion), I18n.T("UpdateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
+                                }));
+                            }
+                        }
+                        catch
+                        {
+                            sf.BeginInvoke(new Action(delegate
+                            {
+                                btnCheckUpdate.Enabled = true;
+                                lblUpdateStatus.Text = I18n.T("UpdateErrorMsg");
+                                MessageBox.Show(sf, I18n.T("UpdateErrorMsg"), I18n.T("UpdateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }));
+                        }
+                    });
+                };
 
                 if (_manager.Settings.HiddenDevices.Count > 0)
                 {
