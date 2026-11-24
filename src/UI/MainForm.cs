@@ -810,7 +810,7 @@ namespace OmniBattery.UI
             if (_btnRefresh != null)
             {
                 _btnRefresh.Text = _isScanning ? I18n.T("BtnScanning") : I18n.T("BtnRefresh");
-                _btnRefresh.Width = _isScanning ? 165 : 92;
+                _btnRefresh.Width = 135;
             }
             if (_btnSettings != null) _btnSettings.Text = I18n.T("BtnSettings");
             if (_chkMinimize != null) _chkMinimize.Text = I18n.T("MinToTrayOnClose");
@@ -1309,7 +1309,27 @@ namespace OmniBattery.UI
                                 }
                                 catch (System.Net.WebException) { }
 
-                                // 2. Caso não haja releases formais, verifica tags do repositório
+                                // 2. Tenta ler a versão diretamente do repositório no GitHub (imune a rate limits de API)
+                                if (string.IsNullOrEmpty(tag))
+                                {
+                                    try
+                                    {
+                                        wc.Headers.Clear();
+                                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
+                                        string rawContent = wc.DownloadString("https://raw.githubusercontent.com/Gartuja/Batuja/main/src/Models/AppSettings.cs");
+                                        int vIdx = rawContent.IndexOf("AppVersion = \"");
+                                        if (vIdx >= 0)
+                                        {
+                                            int start = vIdx + 14;
+                                            int end = rawContent.IndexOf('"', start);
+                                            if (end > start)
+                                                tag = rawContent.Substring(start, end - start);
+                                        }
+                                    }
+                                    catch { }
+                                }
+
+                                // 3. Caso não haja releases formais, verifica tags do repositório
                                 if (string.IsNullOrEmpty(tag))
                                 {
                                     try

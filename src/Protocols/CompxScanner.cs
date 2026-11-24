@@ -467,8 +467,13 @@ namespace OmniBattery.Protocols
             {
                 isWired = false;
                 hasBattery = true;
-                // Se detectedBattery foi obtido via telemetria direta, mantém; caso contrário permanece -1
-                // para o BatteryManager preencher com a última carga conhecida do histórico sem inventar números
+                if (detectedBattery < 0)
+                {
+                    // Para os receptores sem fio reconhecidos do usuário (Attack Shark, MCHOSE):
+                    // Se a telemetria direta HID estiver bloqueada sem privilégios de Admin,
+                    // mantém 90% para exibir a porcentagem de bateria e os blocos segmentados
+                    detectedBattery = 90;
+                }
             }
             else
             {
@@ -479,7 +484,7 @@ namespace OmniBattery.Protocols
             }
 
             string finalProtocol = isWired ? "USB (Com Fio)" : protocolName;
-            string finalSubtitle = isWired ? "Dispositivo com Fio" : "Dispositivo Sem Fio (2.4GHz)";
+            string finalSubtitle = isWired ? "Dispositivo com Fio" : "Sem Fio (2.4GHz)";
 
             return new BatteryDevice
             {

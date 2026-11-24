@@ -40,7 +40,7 @@ namespace OmniBattery.UI
                      ControlStyles.UserPaint |
                      ControlStyles.ResizeRedraw, true);
 
-            Size = new Size(320, 150);
+            Size = new Size(350, 150);
             Margin = new Padding(6);
             Cursor = Cursors.Default;
 
@@ -388,10 +388,10 @@ namespace OmniBattery.UI
                 string sub;
                 if (_device.IsWired)
                     sub = I18n.T("WiredDeviceSubtitle");
-                else if (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio" || _device.Subtitle == "Sem Fio")
-                    sub = I18n.T("WirelessDeviceSubtitle");
+                else if (string.IsNullOrEmpty(_device.Subtitle) || _device.Subtitle == "Sem fio" || _device.Subtitle == "Sem Fio" || _device.Subtitle.IndexOf("Sem Fio", StringComparison.OrdinalIgnoreCase) >= 0)
+                    sub = "Sem Fio (2.4GHz)";
                 else
-                    sub = _device.Subtitle;
+                    sub = _device.Subtitle.Replace("Dispositivo ", "");
 
                 string updatedText = I18n.T("UpdatedAgo", _device.LastUpdated);
                 info = _device.Voltage > 0
