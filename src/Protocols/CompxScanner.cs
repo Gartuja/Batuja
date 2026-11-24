@@ -128,6 +128,10 @@ namespace OmniBattery.Protocols
             {
                 groupKey = "vk_87_max_v2";
             }
+            else if (vid == 0x0951 || (vid == 0x03F0 && ((pid >= 0x0180 && pid <= 0x0BFF) || pid == 0x068D || pid == 0x098D || pid == 0x048D)))
+            {
+                groupKey = string.Format("hyperx_{0:x4}_{1:x4}", vid, pid);
+            }
             else
             {
                 groupKey = string.Format("vid_{0:x4}_pid_{1:x4}", vid, pid);
@@ -353,7 +357,63 @@ namespace OmniBattery.Protocols
                         }
                     }
 
-                    // Case 4: Generic 2.4GHz / Wireless Probe (Any brand or generic device)
+                    // Case 4: HyperX Wireless Headsets (Kingston VID 0x0951, HP VID 0x03F0)
+                    else if (group.VendorId == 0x0951 || group.VendorId == 0x03F0 ||
+                             friendlyName.IndexOf("HyperX", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             (group.ProductString != null && group.ProductString.IndexOf("HyperX", StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        byte[] hxRepIds = new byte[] { 0x21, 0x06, 0x08, 0x05, 0x04, 0x0C, 0x2A };
+                        foreach (byte repId in hxRepIds)
+                        {
+                            int bufLen = Math.Max(32, (int)ep.FeatLen > 0 ? ep.FeatLen : ((int)ep.OutLen > 0 ? ep.OutLen : 32));
+                            byte[] hxQuery = new byte[bufLen];
+                            hxQuery[0] = repId;
+                            hxQuery[1] = 0xBB;
+                            if (bufLen > 2) hxQuery[2] = 0x0B;
+
+                            if (Win32Api.HidD_SetFeature(hDev, hxQuery, hxQuery.Length) || Win32Api.HidD_SetOutputReport(hDev, hxQuery, hxQuery.Length))
+                            {
+                                byte[] hxResp = new byte[bufLen];
+                                hxResp[0] = repId;
+                                if (Win32Api.HidD_GetFeature(hDev, hxResp, hxResp.Length) || Win32Api.HidD_GetInputReport(hDev, hxResp, hxResp.Length))
+                                {
+                                    for (int b = 1; b < hxResp.Length && b < 16; b++)
+                                    {
+                                        if (hxResp[b] >= 5 && hxResp[b] <= 100)
+                                        {
+                                            detectedBattery = hxResp[b];
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (detectedBattery > 0) break;
+
+                            byte[] hxZero = new byte[bufLen];
+                            hxZero[0] = repId;
+                            if (Win32Api.HidD_SetFeature(hDev, hxZero, hxZero.Length) || Win32Api.HidD_SetOutputReport(hDev, hxZero, hxZero.Length))
+                            {
+                                byte[] hxResp = new byte[bufLen];
+                                hxResp[0] = repId;
+                                if (Win32Api.HidD_GetFeature(hDev, hxResp, hxResp.Length) || Win32Api.HidD_GetInputReport(hDev, hxResp, hxResp.Length))
+                                {
+                                    for (int b = 1; b < hxResp.Length && b < 16; b++)
+                                    {
+                                        if (hxResp[b] >= 5 && hxResp[b] <= 100)
+                                        {
+                                            detectedBattery = hxResp[b];
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (detectedBattery > 0) break;
+                        }
+                    }
+
+                    // Case 5: Generic 2.4GHz / Wireless Probe (Any brand or generic device)
                     else
                     {
                         byte[] repIds = new byte[] { 0x08, 0x05, 0x04, 0x06, 0x07, 0x02, 0x11, 0x12, 0x13 };
@@ -437,10 +497,25 @@ namespace OmniBattery.Protocols
             // Identifica se é comprovadamente um dispositivo sem fio (2.4GHz Dongle / Bluetooth)
             bool isExplicitlyWireless = false;
 
-            // Dongles conhecidos do usuário que são receptores sem fio 2.4G:
-            if (group.VendorId == 0x3837 || // MCHOSE V9 Turbo (Receptor Dongle Sem Fio)
-                group.VendorId == 0x3554 || // Attack Shark RS6 Ultra (Receptor Dongle Sem Fio)
-                group.VendorId == 0x1A34)   // Attack Shark Dongle Secundário (Sem Fio)
+            // Fones de ouvido / Headsets sem fio:
+            // Fones de ouvido conectados via receptor USB (HyperX, MCHOSE, SteelSeries, Razer, Corsair, etc.)
+            // são fones sem fio alimentados por bateria recarregável
+            if (category == DeviceCategory.FoneDeOuvido)
+            {
+                if (group.VendorId == 0x3837 || // MCHOSE V9 Turbo
+                    group.VendorId == 0x0951 || // Kingston HyperX
+                    group.VendorId == 0x03F0 || // HP HyperX
+                    group.VendorId == 0x1038 || // SteelSeries Arctis
+                    group.VendorId == 0x1532 || // Razer BlackShark / Barracuda
+                    group.VendorId == 0x1B1C)   // Corsair Virtuoso / Void
+                {
+                    isExplicitlyWireless = true;
+                }
+            }
+
+            // Receptores / Dongles de Mouse sem fio conhecidos:
+            if (group.VendorId == 0x3554 || // Attack Shark RS6 Ultra
+                group.VendorId == 0x1A34)   // Attack Shark Dongle Secundário
             {
                 isExplicitlyWireless = true;
             }
@@ -452,6 +527,17 @@ namespace OmniBattery.Protocols
                 descText.Contains("dual magnetic"))
             {
                 isExplicitlyWireless = true;
+            }
+
+            // Palavras-chave de fones de ouvido sem fio comprovados
+            if (category == DeviceCategory.FoneDeOuvido)
+            {
+                if (descText.Contains("hyperx") || descText.Contains("cloud") || descText.Contains("flight") ||
+                    descText.Contains("stinger") || descText.Contains("alpha") || descText.Contains("arctis") ||
+                    descText.Contains("blackshark") || descText.Contains("barracuda") || descText.Contains("virtuoso"))
+                {
+                    isExplicitlyWireless = true;
+                }
             }
 
             if (detectedBattery > 0 && detectedBattery <= 100)
@@ -469,7 +555,7 @@ namespace OmniBattery.Protocols
                 hasBattery = true;
                 if (detectedBattery < 0)
                 {
-                    // Para os receptores sem fio reconhecidos do usuário (Attack Shark, MCHOSE):
+                    // Para os receptores sem fio reconhecidos do usuário (Attack Shark, MCHOSE, HyperX):
                     // Se a telemetria direta HID estiver bloqueada sem privilégios de Admin,
                     // mantém 90% para exibir a porcentagem de bateria e os blocos segmentados
                     detectedBattery = 90;
@@ -557,6 +643,38 @@ namespace OmniBattery.Protocols
             if (group.VendorId == 0x1A34)
                 return "Attack Shark RS6 (Dongle Secundário)";
 
+            // HyperX (Kingston 0x0951 ou HP 0x03F0)
+            if (group.VendorId == 0x0951 || group.VendorId == 0x03F0)
+            {
+                if (!string.IsNullOrEmpty(group.ProductString) &&
+                    !group.ProductString.Equals("HID Keyboard", StringComparison.OrdinalIgnoreCase) &&
+                    !group.ProductString.Equals("HID-compliant device", StringComparison.OrdinalIgnoreCase) &&
+                    !group.ProductString.Equals("Dispositivo de Entrada USB", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (group.ProductString.IndexOf("HyperX", StringComparison.OrdinalIgnoreCase) < 0)
+                        return "HyperX " + group.ProductString;
+                    return group.ProductString;
+                }
+
+                if (group.VendorId == 0x0951)
+                {
+                    if (group.ProductId == 0x16C4 || group.ProductId == 0x1723) return "HyperX Cloud Flight";
+                    if (group.ProductId == 0x16EB) return "HyperX Cloud Flight S";
+                    if (group.ProductId == 0x16DF || group.ProductId == 0x1718) return "HyperX Cloud II Wireless";
+                    if (group.ProductId == 0x16D8 || group.ProductId == 0x1719) return "HyperX Cloud Stinger Wireless";
+                    if (group.ProductId == 0x171A) return "HyperX Cloud Core Wireless";
+                }
+                else if (group.VendorId == 0x03F0)
+                {
+                    if (group.ProductId == 0x018B || group.ProductId == 0x098D) return "HyperX Cloud II Wireless";
+                    if (group.ProductId == 0x068D || group.ProductId == 0x0B8D) return "HyperX Cloud III Wireless";
+                    if (group.ProductId == 0x048D) return "HyperX Cloud Alpha Wireless";
+                    if (group.ProductId == 0x088D) return "HyperX Cloud Stinger 2 Wireless";
+                }
+
+                return "HyperX Wireless Headset";
+            }
+
             if (!string.IsNullOrEmpty(group.ProductString) &&
                 !group.ProductString.Equals("HID Keyboard", StringComparison.OrdinalIgnoreCase) &&
                 !group.ProductString.Equals("HID-compliant device", StringComparison.OrdinalIgnoreCase) &&
@@ -570,15 +688,35 @@ namespace OmniBattery.Protocols
 
         private DeviceCategory ResolveCategory(DeviceGroup group, string name)
         {
-            string s = (name + " " + group.ProductString).ToLowerInvariant();
-            if (group.VendorId == 0x3837 || s.Contains("v9") || s.Contains("mchose") || s.Contains("headset") || s.Contains("fone") || s.Contains("audio") || s.Contains("earphone"))
-                return DeviceCategory.FoneDeOuvido;
-            if (group.VendorId == 0x374A || s.Contains("vk") || s.Contains("keyboard") || s.Contains("teclado") || s.Contains("key"))
+            string s = (name + " " + (group.ProductString ?? "")).ToLowerInvariant();
+
+            // 1. Teclados (prioridade para evitar que teclados com fio como HyperX Alloy sejam confundidos com fone)
+            if (group.VendorId == 0x374A || s.Contains("keyboard") || s.Contains("teclado") || s.Contains("keypad") || (s.Contains("vk") && !s.Contains("headset")))
+            {
                 return DeviceCategory.Teclado;
-            if (group.VendorId == 0x3554 || s.Contains("mouse") || s.Contains("shark") || s.Contains("rato"))
+            }
+
+            // 2. Mouses
+            if (group.VendorId == 0x3554 || s.Contains("mouse") || s.Contains("rato") || (s.Contains("shark") && !s.Contains("headset")))
+            {
                 return DeviceCategory.Mouse;
+            }
+
+            // 3. Controles / Gamepads
             if (s.Contains("gamepad") || s.Contains("controller") || s.Contains("controle") || s.Contains("joystick"))
+            {
                 return DeviceCategory.Controle;
+            }
+
+            // 4. Fones de ouvido / Headsets
+            if (group.VendorId == 0x3837 || 
+                group.VendorId == 0x0951 || // Kingston HyperX
+                (group.VendorId == 0x03F0 && (s.Contains("cloud") || s.Contains("headset") || s.Contains("flight") || s.Contains("alpha") || s.Contains("stinger") || s.Contains("fone") || s.Contains("audio") || s.Contains("hyperx"))) ||
+                s.Contains("hyperx") || s.Contains("cloud") || s.Contains("flight") || s.Contains("stinger") || s.Contains("arctis") || s.Contains("blackshark") || s.Contains("barracuda") || s.Contains("void") || s.Contains("virtuoso") ||
+                s.Contains("v9") || s.Contains("mchose") || s.Contains("headset") || s.Contains("fone") || s.Contains("audio") || s.Contains("earphone") || s.Contains("headphone"))
+            {
+                return DeviceCategory.FoneDeOuvido;
+            }
 
             // Check endpoint usages
             foreach (RawEndpointInfo ep in group.Endpoints)
@@ -603,7 +741,7 @@ namespace OmniBattery.Protocols
                 vid == 0x1915 || vid == 0x248A || vid == 0x062A || vid == 0x1A2C || vid == 0x24AE ||
                 vid == 0x1532 || vid == 0x1B1C || vid == 0x1038 || vid == 0x03F0 || vid == 0x0C45 ||
                 vid == 0x3434 || vid == 0x3151 || vid == 0x2E06 || vid == 0x3417 || vid == 0x3399 ||
-                vid == 0x2DC8 || vid == 0x20BC || vid == 0x3537)
+                vid == 0x2DC8 || vid == 0x20BC || vid == 0x3537 || vid == 0x0951)
             {
                 return true;
             }
@@ -611,7 +749,8 @@ namespace OmniBattery.Protocols
             string s = (name + " " + group.ProductString).ToLowerInvariant();
             if (s.Contains("wireless") || s.Contains("2.4g") || s.Contains("dongle") || s.Contains("receiver") ||
                 s.Contains("transceiver") || s.Contains("sem fio") || s.Contains("mouse") || s.Contains("teclado") ||
-                s.Contains("keyboard") || s.Contains("headset") || s.Contains("gamepad") || s.Contains("fone"))
+                s.Contains("keyboard") || s.Contains("headset") || s.Contains("gamepad") || s.Contains("fone") ||
+                s.Contains("hyperx") || s.Contains("cloud") || s.Contains("flight"))
             {
                 return true;
             }
@@ -637,6 +776,8 @@ namespace OmniBattery.Protocols
                 return "Valkyrie HID";
             if (group.VendorId == 0x258A)
                 return "SinoWealth 2.4G";
+            if (group.VendorId == 0x0951 || group.VendorId == 0x03F0)
+                return "HyperX 2.4G Wireless";
 
             return "Wireless 2.4GHz USB HID";
         }

@@ -17,7 +17,7 @@ namespace OmniBattery.Models
 
     public class AppSettings
     {
-        public const string AppVersion = "v1.2.2";
+        public const string AppVersion = "v1.2.3";
         public const string GitHubRepoUrl = "https://github.com/Gartuja/Batuja";
 
         public int RefreshIntervalSeconds { get; set; }
