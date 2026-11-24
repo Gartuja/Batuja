@@ -64,13 +64,19 @@ Write-Host "Iniciando compilação nativa com .NET Framework..." -ForegroundColo
 
 & $csc $args
 
+$ProgressPreference = "SilentlyContinue"
 if ($LASTEXITCODE -eq 0 -and (Test-Path $outputExe)) {
     Copy-Item -Path $outputExe -Destination $legacyExe -Force
+    $zipPath = Join-Path $PSScriptRoot "MoniTuja.zip"
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+    Compress-Archive -Path $outputExe -DestinationPath $zipPath -Force
+
     $sizeKb = [Math]::Round((Get-Item $outputExe).Length / 1KB, 2)
     Write-Host "=========================================" -ForegroundColor Green
     Write-Host "  COMPILAÇÃO CONCLUÍDA COM SUCESSO!      " -ForegroundColor Green
     Write-Host "  Executável gerado: MoniTuja.exe        " -ForegroundColor Green
     Write-Host "  Cópia de compatibilidade: Batuja.exe   " -ForegroundColor Green
+    Write-Host "  Pacote ZIP para envio: MoniTuja.zip    " -ForegroundColor Green
     Write-Host "  Tamanho do binário: $sizeKb KB         " -ForegroundColor Green
     Write-Host "=========================================" -ForegroundColor Green
 } else {

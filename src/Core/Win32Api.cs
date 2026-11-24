@@ -216,46 +216,59 @@ namespace OmniBattery.Core
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS lpSystemPowerStatus);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        public static extern IntPtr LoadLibrary(string lpLibFileName);
+        // XInput direct imports (removes LoadLibrary/GetProcAddress dynamic resolution triggers)
+        [DllImport("xinput1_4.dll", EntryPoint = "XInputGetBatteryInformation")]
+        private static extern uint XInput14_GetBattery(uint dwUserIndex, byte devType, out XINPUT_BATTERY_INFORMATION pBatteryInformation);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+        [DllImport("xinput1_3.dll", EntryPoint = "XInputGetBatteryInformation")]
+        private static extern uint XInput13_GetBattery(uint dwUserIndex, byte devType, out XINPUT_BATTERY_INFORMATION pBatteryInformation);
 
-        // XInput Dynamic Loader
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        public delegate uint XInputGetBatteryInformationDelegate(uint dwUserIndex, byte devType, out XINPUT_BATTERY_INFORMATION pBatteryInformation);
+        [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetBatteryInformation")]
+        private static extern uint XInput91_GetBattery(uint dwUserIndex, byte devType, out XINPUT_BATTERY_INFORMATION pBatteryInformation);
 
-        private static XInputGetBatteryInformationDelegate _xinputGetBattery = null;
-        private static bool _xinputLoaded = false;
+        private static int _xinputVersionPreference = 0; // 0 = unknown, 14, 13, 91, -1 = none
 
         public static bool TryGetXInputBattery(uint userIndex, out XINPUT_BATTERY_INFORMATION info)
         {
             info = new XINPUT_BATTERY_INFORMATION();
 
-            if (!_xinputLoaded)
+            if (_xinputVersionPreference == 0 || _xinputVersionPreference == 14)
             {
-                string[] dlls = new string[] { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" };
-                foreach (string dll in dlls)
+                try
                 {
-                    IntPtr hMod = LoadLibrary(dll);
-                    if (hMod != IntPtr.Zero)
-                    {
-                        IntPtr proc = GetProcAddress(hMod, "XInputGetBatteryInformation");
-                        if (proc != IntPtr.Zero)
-                        {
-                            _xinputGetBattery = (XInputGetBatteryInformationDelegate)Marshal.GetDelegateForFunctionPointer(proc, typeof(XInputGetBatteryInformationDelegate));
-                            break;
-                        }
-                    }
+                    uint res = XInput14_GetBattery(userIndex, 0 /* GAMEPAD */, out info);
+                    _xinputVersionPreference = 14;
+                    return res == 0;
                 }
-                _xinputLoaded = true;
+                catch (DllNotFoundException) { _xinputVersionPreference = 13; }
+                catch (EntryPointNotFoundException) { _xinputVersionPreference = 13; }
+                catch { }
             }
 
-            if (_xinputGetBattery != null)
+            if (_xinputVersionPreference == 13)
             {
-                uint res = _xinputGetBattery(userIndex, 0 /* GAMEPAD */, out info);
-                return res == 0;
+                try
+                {
+                    uint res = XInput13_GetBattery(userIndex, 0 /* GAMEPAD */, out info);
+                    _xinputVersionPreference = 13;
+                    return res == 0;
+                }
+                catch (DllNotFoundException) { _xinputVersionPreference = 91; }
+                catch (EntryPointNotFoundException) { _xinputVersionPreference = 91; }
+                catch { }
+            }
+
+            if (_xinputVersionPreference == 91)
+            {
+                try
+                {
+                    uint res = XInput91_GetBattery(userIndex, 0 /* GAMEPAD */, out info);
+                    _xinputVersionPreference = 91;
+                    return res == 0;
+                }
+                catch (DllNotFoundException) { _xinputVersionPreference = -1; }
+                catch (EntryPointNotFoundException) { _xinputVersionPreference = -1; }
+                catch { }
             }
 
             return false;
