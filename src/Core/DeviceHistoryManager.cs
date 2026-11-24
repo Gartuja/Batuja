@@ -202,7 +202,7 @@ namespace OmniBattery.Core
                 try
                 {
                     StringBuilder sb = new StringBuilder();
-                    sb.AppendLine("# Batuja - Histórico de Dispositivos Conectados");
+                    sb.AppendLine("# MoniTuja - Histórico de Dispositivos Conectados");
                     sb.AppendLine(string.Format("# Atualizado em {0:yyyy-MM-dd HH:mm:ss}", DateTime.Now));
                     sb.AppendLine();
 

@@ -54,8 +54,8 @@ namespace OmniBattery
             {
                 if (!createdNew)
                 {
-                    MessageBox.Show("O Batuja já está em execução na bandeja do sistema!",
-                        "Batuja - Monitor de Dispositivos sem Fio", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("O MoniTuja já está em execução na bandeja do sistema!",
+                        "MoniTuja - Monitor de Dispositivos sem Fio", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -64,7 +64,7 @@ namespace OmniBattery
 
                 AppSettings settings = AppSettings.Load();
 
-                // Executable was renamed to Batuja.exe: refresh the autostart path if enabled
+                // Executable was renamed to MoniTuja.exe: refresh the autostart path if enabled
                 if (settings.StartWithWindows)
                     AutostartManager.SetAutostart(true);
 
@@ -92,7 +92,7 @@ namespace OmniBattery
 
             Console.WriteLine();
             Console.WriteLine("==========================================================================");
-            Console.WriteLine("  Batuja - Diagnostico e Varredura de Dispositivos sem Fio                ");
+            Console.WriteLine("  MoniTuja - Diagnostico e Varredura de Dispositivos sem Fio            ");
             Console.WriteLine("==========================================================================");
             Console.WriteLine("Iniciando varredura nos protocolos: Compx 2.4G, Logitech, XInput, Bluetooth...");
             Console.WriteLine();

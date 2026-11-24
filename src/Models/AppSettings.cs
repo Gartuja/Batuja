@@ -27,7 +27,7 @@ namespace OmniBattery.Models
     public class AppSettings
     {
         public const string AppVersion = "v1.2.4";
-        public const string GitHubRepoUrl = "https://github.com/Gartuja/Batuja";
+        public const string GitHubRepoUrl = "https://github.com/Gartuja/MoniTuja";
 
         public int RefreshIntervalSeconds { get; set; }
         public int LowBatteryThreshold { get; set; }
@@ -391,7 +391,7 @@ namespace OmniBattery.Models
             try
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("# Batuja - Monitor de Dispositivos sem Fio - Configurações");
+                sb.AppendLine("# MoniTuja - Monitor de Dispositivos sem Fio - Configurações");
                 sb.AppendLine(string.Format("RefreshIntervalSeconds={0}", RefreshIntervalSeconds));
                 sb.AppendLine(string.Format("LowBatteryThreshold={0}", LowBatteryThreshold));
                 sb.AppendLine(string.Format("EnableNotifications={0}", EnableNotifications));

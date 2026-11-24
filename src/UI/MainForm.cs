@@ -1377,7 +1377,7 @@ namespace OmniBattery.UI
                         // 1. Tenta obter a release mais recente no GitHub
                         try
                         {
-                            string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
+                            string json = wc.DownloadString("https://api.github.com/repos/Gartuja/MoniTuja/releases/latest");
                             int tagIdx = json.IndexOf("\"tag_name\":");
                             if (tagIdx >= 0)
                             {
@@ -1399,7 +1399,7 @@ namespace OmniBattery.UI
                             {
                                 wc.Headers.Clear();
                                 wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
-                                string rawContent = wc.DownloadString("https://raw.githubusercontent.com/Gartuja/Batuja/main/src/Models/AppSettings.cs");
+                                string rawContent = wc.DownloadString("https://raw.githubusercontent.com/Gartuja/MoniTuja/main/src/Models/AppSettings.cs");
                                 int vIdx = rawContent.IndexOf("AppVersion = \"");
                                 if (vIdx >= 0)
                                 {
@@ -1420,7 +1420,7 @@ namespace OmniBattery.UI
                                 wc.Headers.Clear();
                                 wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
                                 wc.Headers.Add("Accept", "application/vnd.github.v3+json");
-                                string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/tags");
+                                string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/MoniTuja/tags");
                                 int nameIdx = tagsJson.IndexOf("\"name\":");
                                 if (nameIdx >= 0)
                                 {
