@@ -4,13 +4,6 @@ Aplicativo projetado para monitorar a porcentagem de bateria dos seus dispositiv
 
 ---
 
-## Principais Funcionalidades
-
-- **Sobreposição na Tela (HUD Overlay para Jogos e Vídeos em Tela Cheia) :**
-  - Inspirado na sobreposição de desempenho do Windows (Windows + G / Xbox Game Bar).
-  - **Bateria em Segmentos**: Design de bateria com contorno arredondado, polo positivo e barras verticais internas proporcionais à carga, acompanhado do ícone do dispositivo, porcentagem em tempo real e indicador de carregamento (⚡).
-  - **Customizável**: Arraste para qualquer canto da tela (posição salva automaticamente), alterne entre orientação Horizontal e Vertical, ajuste opacidade (100% a 45%) ou bloqueie a posição.
-
 - **Ícones Individuais na Barra de Tarefas / Bandeja:**
   - Cada dispositivo conectado ganha seu próprio ícone na bandeja do sistema exibindo a porcentagem exata da bateria (ex: `90`, `85`, `70`).
   - O aplicativo também fica presente na **Barra de Tarefas principal** como um aplicativo ativo padrão do Windows.
