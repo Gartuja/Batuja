@@ -169,7 +169,7 @@ namespace OmniBattery.UI
         // ─────────────────────────── Form style ───────────────────────────────
         private void InitializeFormStyle()
         {
-            Text = string.Format("MoniTuja - Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
+            Text = string.Format("Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
             Size = new Size(1000, 560);
             MinimumSize = new Size(860, 480);
             FormBorderStyle = FormBorderStyle.None;
@@ -204,18 +204,18 @@ namespace OmniBattery.UI
                 using (LinearGradientBrush lgb = new LinearGradientBrush(gradRect, Color.FromArgb(0, 0, 128), Color.FromArgb(16, 132, 208), 0f))
                     g.FillRectangle(lgb, gradRect);
 
-                // Pequeno ícone do mouse na esquerda
+                // Pequeno ícone do lobo fofinho na esquerda
                 try
                 {
-                    Rectangle iconBox = new Rectangle(5, 4, 14, 15);
-                    IconRenderer.DrawDeviceIcon(g, iconBox, DeviceCategory.Mouse, Color.White, null);
+                    Rectangle iconBox = new Rectangle(5, 4, 14, 14);
+                    AppIconRenderer.Draw(g, iconBox);
                 }
                 catch { }
 
                 // Título da janela com versão dinâmica
                 using (Font tf = new Font("Tahoma", 8.5f, FontStyle.Bold))
                 {
-                    string titleText = string.Format("MoniTuja - Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
+                    string titleText = string.Format("Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
                     g.DrawString(titleText, tf, Brushes.White, 23, 4);
                 }
 
@@ -332,8 +332,8 @@ namespace OmniBattery.UI
 
             PictureBox pbLogo = new PictureBox
             {
-                Size = new Size(22, 26),
-                Location = new Point(10, 5),
+                Size = new Size(26, 26),
+                Location = new Point(6, 4),
                 BackColor = Color.Transparent,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
