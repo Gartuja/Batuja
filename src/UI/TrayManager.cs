@@ -26,7 +26,7 @@ namespace OmniBattery.UI
 
             _defaultIcon = new NotifyIcon
             {
-                Text = "Batuja: Buscando dispositivos...",
+                Text = "MoniTuja: Buscando dispositivos...",
                 Visible = true,
                 Icon = CreateNumericIcon(null, Color.FromArgb(88, 101, 242))
             };
@@ -85,7 +85,7 @@ namespace OmniBattery.UI
             {
                 ClearAllDeviceIcons();
                 _defaultIcon.Visible = true;
-                _defaultIcon.Text = "Batuja: Nenhum dispositivo ativo";
+                _defaultIcon.Text = "MoniTuja: Nenhum dispositivo ativo";
                 return;
             }
 
@@ -118,7 +118,7 @@ namespace OmniBattery.UI
             if (currentKeys.Count == 0)
             {
                 _defaultIcon.Visible = true;
-                _defaultIcon.Text = "Batuja: Todos os dispositivos estão desligados";
+                _defaultIcon.Text = "MoniTuja: Todos os dispositivos estão desligados";
             }
 
             // Remove icons for disconnected devices

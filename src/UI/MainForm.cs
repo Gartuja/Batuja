@@ -169,7 +169,7 @@ namespace OmniBattery.UI
         // ─────────────────────────── Form style ───────────────────────────────
         private void InitializeFormStyle()
         {
-            Text = I18n.T("AppTitle");
+            Text = string.Format("MoniTuja - Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
             Size = new Size(1000, 560);
             MinimumSize = new Size(860, 480);
             FormBorderStyle = FormBorderStyle.None;
@@ -212,10 +212,11 @@ namespace OmniBattery.UI
                 }
                 catch { }
 
-                // Título da janela
+                // Título da janela com versão dinâmica
                 using (Font tf = new Font("Tahoma", 8.5f, FontStyle.Bold))
                 {
-                    g.DrawString("Batuja - Monitor de Dispositivos sem Fio", tf, Brushes.White, 23, 4);
+                    string titleText = string.Format("MoniTuja - Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
+                    g.DrawString(titleText, tf, Brushes.White, 23, 4);
                 }
 
                 // Botões clássicos de janela: _ □ X com relevo 3D
@@ -341,7 +342,7 @@ namespace OmniBattery.UI
 
             Label lblTitle = new Label
             {
-                Text = "Batuja",
+                Text = "MoniTuja",
                 Font = new Font("Tahoma", 13.5f, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
@@ -360,7 +361,7 @@ namespace OmniBattery.UI
                 Size = new Size(160, 20),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(14, 0, 0, 0),
-                Location = new Point(114, 10)
+                Location = new Point(148, 10)
             };
             _lblDeviceCount.Paint += delegate(object sender, PaintEventArgs e)
             {
@@ -569,7 +570,7 @@ namespace OmniBattery.UI
             // Reposition device counter badge safely so it never overlaps buttons
             if (_lblDeviceCount != null)
             {
-                int leftPos = 114;
+                int leftPos = 142;
                 _lblDeviceCount.Location = new Point(leftPos, 8);
                 if (!string.IsNullOrEmpty(_lblDeviceCount.Text))
                 {
@@ -1254,7 +1255,7 @@ namespace OmniBattery.UI
 
                             using (System.Net.WebClient wc = new System.Net.WebClient())
                             {
-                                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Batuja/" + AppSettings.AppVersion);
+                                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
                                 wc.Headers.Add("Accept", "application/vnd.github.v3+json");
 
                                 // 1. Tenta obter a release mais recente no GitHub
@@ -1281,7 +1282,7 @@ namespace OmniBattery.UI
                                     try
                                     {
                                         wc.Headers.Clear();
-                                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Batuja/" + AppSettings.AppVersion);
+                                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
                                         wc.Headers.Add("Accept", "application/vnd.github.v3+json");
                                         string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/tags");
                                         int nameIdx = tagsJson.IndexOf("\"name\":");
@@ -1315,7 +1316,7 @@ namespace OmniBattery.UI
                                     else
                                     {
                                         string currentVer = !string.IsNullOrEmpty(tag) ? tag : AppSettings.AppVersion;
-                                        lblUpdateStatus.Text = string.Format("Batuja {0} é a versão mais recente.", currentVer);
+                                        lblUpdateStatus.Text = string.Format("MoniTuja {0} é a versão mais recente.", currentVer);
                                         MessageBox.Show(sf, string.Format("Você já está na versão mais recente ({0}).\nNenhuma atualização necessária.", currentVer), I18n.T("UpdateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                                     }
                                 }));

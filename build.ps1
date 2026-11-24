@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = "Stop"
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "  Compilando Batuja...                   " -ForegroundColor Cyan
+Write-Host "  Compilando MoniTuja...                 " -ForegroundColor Cyan
 Write-Host "  Monitor de Dispositivos sem Fio        " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
@@ -15,7 +15,8 @@ if (-not (Test-Path $csc)) {
     exit 1
 }
 
-$outputExe = Join-Path $PSScriptRoot "Batuja.exe"
+$outputExe = Join-Path $PSScriptRoot "MoniTuja.exe"
+$legacyExe = Join-Path $PSScriptRoot "Batuja.exe"
 $srcFiles = Get-ChildItem -Path (Join-Path $PSScriptRoot "src") -Filter "*.cs" -Recurse | Select-Object -ExpandProperty FullName
 
 # ── Gera o ícone do aplicativo (mouse azul claro + cinza) ─────────────────
@@ -64,10 +65,12 @@ Write-Host "Iniciando compilação nativa com .NET Framework..." -ForegroundColo
 & $csc $args
 
 if ($LASTEXITCODE -eq 0 -and (Test-Path $outputExe)) {
+    Copy-Item -Path $outputExe -Destination $legacyExe -Force
     $sizeKb = [Math]::Round((Get-Item $outputExe).Length / 1KB, 2)
     Write-Host "=========================================" -ForegroundColor Green
     Write-Host "  COMPILAÇÃO CONCLUÍDA COM SUCESSO!      " -ForegroundColor Green
-    Write-Host "  Executável gerado: Batuja.exe          " -ForegroundColor Green
+    Write-Host "  Executável gerado: MoniTuja.exe        " -ForegroundColor Green
+    Write-Host "  Cópia de compatibilidade: Batuja.exe   " -ForegroundColor Green
     Write-Host "  Tamanho do binário: $sizeKb KB         " -ForegroundColor Green
     Write-Host "=========================================" -ForegroundColor Green
 } else {

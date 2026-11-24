@@ -79,7 +79,7 @@ namespace OmniBattery.Core
         private static void RegisterStrings()
         {
             // App Title & Header
-            Reg("AppTitle", "Batuja - Monitor de Dispositivos sem Fio", "Batuja - Wireless Device Monitor", "Batuja - Monitor de Dispositivos Inalámbricos");
+            Reg("AppTitle", "MoniTuja - Monitor de Dispositivos sem Fio", "MoniTuja - Wireless Device Monitor", "MoniTuja - Monitor de Dispositivos Inalámbricos");
             Reg("DevicesCount", "{0} dispositivo(s)", "{0} device(s)", "{0} dispositivo(s)");
             Reg("Ready", "Pronto", "Ready", "Listo");
             Reg("ScanningStatus", "Buscando dispositivos sem fio...", "Searching for wireless devices...", "Buscando dispositivos inalámbricos...");
@@ -118,7 +118,7 @@ namespace OmniBattery.Core
             Reg("WiredDeviceNotice", "Dispositivo com Fio (Sem bateria)", "Wired Device (No battery)", "Dispositivo con Cable (Sin batería)");
             Reg("WiredBadge", "Com Fio", "Wired", "Con Cable");
             Reg("VoltageLabel", "Tensão: {0:F2}V", "Voltage: {0:F2}V", "Voltaje: {0:F2}V");
-            Reg("OverlayNoDevices", "Batuja: Nenhum dispositivo sem fio ligado", "Batuja: No wireless devices turned on", "Batuja: Ningún dispositivo inalámbrico encendido");
+            Reg("OverlayNoDevices", "MoniTuja: Nenhum dispositivo sem fio ligado", "MoniTuja: No wireless devices turned on", "MoniTuja: Ningún dispositivo inalámbrico encendido");
 
             // Categories
             Reg("CatMouse", "Mouse", "Mouse", "Ratón / Mouse");
@@ -138,14 +138,14 @@ namespace OmniBattery.Core
             Reg("TrayIconStyle", "Estilo dos Ícones da Bandeja", "Tray Icon Style", "Estilo de Íconos de Barra");
             Reg("ScreenOverlay", "Sobreposição na Tela (HUD)", "Screen Overlay (HUD)", "Superposición en Pantalla (HUD)");
             Reg("RefreshNow", "Atualizar Agora", "Refresh Now", "Actualizar Ahora");
-            Reg("ExitApp", "Sair do Batuja", "Exit Batuja", "Salir de Batuja");
+            Reg("ExitApp", "Sair do MoniTuja", "Exit MoniTuja", "Salir de MoniTuja");
             Reg("StyleModern", "Moderno", "Modern", "Moderno");
             Reg("StyleAeroGlass", "AeroGlass", "AeroGlass", "AeroGlass");
             Reg("StyleRetro", "Retro", "Retro", "Retro");
             Reg("StyleMinimal", "Minimalista", "Minimalist", "Minimalista");
 
             // Settings Dialog
-            Reg("SettingsTitle", "Batuja - Configurações", "Batuja - Settings", "Batuja - Ajustes");
+            Reg("SettingsTitle", "MoniTuja - Configurações", "MoniTuja - Settings", "MoniTuja - Ajustes");
             Reg("RefreshIntervalLabel", "Intervalo de Atualização (segundos):", "Refresh Interval (seconds):", "Intervalo de Actualización (segundos):");
             Reg("LowBatteryThresholdLabel", "Alerta de Bateria Baixa (%):", "Low Battery Alert (%):", "Alerta de Batería Baja (%):");
             Reg("EnableNotifLabel", "Exibir Notificações do Windows", "Show Windows Notifications", "Mostrar Notificaciones de Windows");
@@ -156,17 +156,17 @@ namespace OmniBattery.Core
             Reg("BtnSave", "Salvar", "Save", "Guardar");
             Reg("BtnCancel", "Cancelar", "Cancel", "Cancelar");
             Reg("MinToTrayOnClose", "Minimizar para a bandeja ao fechar", "Minimize to tray on close", "Minimizar a la bandeja al cerrar");
-            Reg("AppVersionLabel", "Versão do Batuja: {0}", "Batuja Version: {0}", "Versión de Batuja: {0}");
+            Reg("AppVersionLabel", "Versão do MoniTuja: {0}", "MoniTuja Version: {0}", "Versión de MoniTuja: {0}");
             Reg("CheckUpdatesBtn", "Buscar Atualizações no GitHub", "Check for Updates on GitHub", "Buscar Actualizaciones en GitHub");
             Reg("CheckingUpdates", "Buscando atualizações...", "Checking for updates...", "Buscando actualizaciones...");
-            Reg("UpdateTitle", "Atualizações do Batuja", "Batuja Updates", "Actualizaciones de Batuja");
+            Reg("UpdateTitle", "Atualizações do MoniTuja", "MoniTuja Updates", "Actualizaciones de MoniTuja");
             Reg("UpdateAvailableMsg", "Uma nova versão ({0}) está disponível no GitHub!\nDeseja abrir a página de download agora?", "A new version ({0}) is available on GitHub!\nDo you want to open the download page now?", "¡Una nueva versión ({0}) está disponible en GitHub!\n¿Desea abrir la página de descarga ahora?");
             Reg("UpdateLatestMsg", "Você já está utilizando a versão mais recente ({0}).", "You are already using the latest version ({0}).", "Ya estás utilizando la versión más reciente ({0}).");
             Reg("UpdateErrorMsg", "Não foi possível verificar atualizações no momento.\nVerifique sua conexão à internet.", "Could not check for updates right now.\nPlease check your internet connection.", "No se pudo verificar actualizaciones en este momento.\nVerifique su conexión a internet.");
 
             // History Form
-            Reg("HistoryTitle", "Batuja - Histórico de Dispositivos", "Batuja - Device History", "Batuja - Historial de Dispositivos");
-            Reg("HistorySubtitle", "Todos os dispositivos sem fio já conectados durante o uso do Batuja", "All wireless devices connected during Batuja usage", "Todos los dispositivos inalámbricos conectados durante el uso de Batuja");
+            Reg("HistoryTitle", "MoniTuja - Histórico de Dispositivos", "MoniTuja - Device History", "MoniTuja - Historial de Dispositivos");
+            Reg("HistorySubtitle", "Todos os dispositivos sem fio já conectados durante o uso do MoniTuja", "All wireless devices connected during MoniTuja usage", "Todos los dispositivos inalámbricos conectados durante el uso de MoniTuja");
             Reg("ClearHistory", "Limpar Histórico", "Clear History", "Limpiar Historial");
             Reg("Close", "Fechar", "Close", "Cerrar");
             Reg("ConnectedStatus", "Conectado", "Connected", "Conectado");
