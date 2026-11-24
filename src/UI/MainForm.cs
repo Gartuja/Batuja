@@ -297,6 +297,14 @@ namespace OmniBattery.UI
                 BackColor = Color.FromArgb(54, 57, 63),
                 Padding = new Padding(0)
             };
+            try
+            {
+                typeof(Panel).InvokeMember("DoubleBuffered",
+                    System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                    null, _headerPanel, new object[] { true });
+            }
+            catch { }
+            _headerPanel.Resize += delegate { _headerPanel.Invalidate(); };
             _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
@@ -554,9 +562,9 @@ namespace OmniBattery.UI
 
             _headerPanel.SetBounds(0, TITLE_H, cw, HEADER_H);
 
-            // Reposition header buttons right-aligned inside header
+            // Reposition header buttons right-aligned inside header (largura estável de 135px para evitar repuxo e borrões)
             if (_btnRefresh != null)
-                _btnRefresh.Width = _isScanning ? 160 : 130;
+                _btnRefresh.Width = 135;
 
             int btnX = cw - 8;
             AeroGlassButton[] buttons = new[]
@@ -570,6 +578,7 @@ namespace OmniBattery.UI
                 btnX -= btn.Width + 4;
                 btn.Location = new Point(btnX, 6);
             }
+            _headerPanel.Invalidate();
 
             // Reposition device counter badge safely so it never overlaps buttons
             if (_lblDeviceCount != null)
@@ -974,7 +983,7 @@ namespace OmniBattery.UI
             {
                 _btnRefresh.Enabled = false;
                 _btnRefresh.Text = I18n.T("BtnScanning");
-                _btnRefresh.Width = 195;
+                _btnRefresh.Width = 135;
                 _lblDeviceCount.Text = I18n.T("BtnScanning");
                 _lblStatus.Text = I18n.T("ScanningStatus");
             }
@@ -982,7 +991,7 @@ namespace OmniBattery.UI
             {
                 _btnRefresh.Enabled = true;
                 _btnRefresh.Text = I18n.T("BtnRefresh");
-                _btnRefresh.Width = 108;
+                _btnRefresh.Width = 135;
                 _lblStatus.Text = I18n.T("LastUpdatedStatus", DateTime.Now, _manager.Settings.RefreshIntervalSeconds);
             }
             Relayout();
@@ -1070,8 +1079,28 @@ namespace OmniBattery.UI
         private void OnRequestHideDevice(BatteryDevice dev)
         {
             if (dev == null) return;
+
+            // Remove visualmente de forma instantânea sem congelar a interface
+            string key = dev.DeviceKey;
+            if (_cardControls.ContainsKey(key))
+            {
+                DeviceCardControl card = _cardControls[key];
+                _cardsFlow.Controls.Remove(card);
+                card.Dispose();
+                _cardControls.Remove(key);
+            }
+
+            if (_cardControls.Count == 0)
+            {
+                _emptyPanel.Visible = true;
+                if (!_cardsFlow.Controls.Contains(_emptyPanel))
+                    _cardsFlow.Controls.Add(_emptyPanel);
+                CenterEmptyPanel();
+            }
+
+            _lblDeviceCount.Text = (_cardControls.Count > 0) ? I18n.T("DevicesCount", _cardControls.Count) : "";
+
             _manager.SetDeviceHidden(dev, true);
-            _manager.TriggerScanAsync();
         }
 
         private void OnRequestColorChange(BatteryDevice dev)

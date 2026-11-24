@@ -151,29 +151,21 @@ namespace OmniBattery.Protocols
                         continue;
 
                     // Verifica se o devnode está fisicamente conectado
+                    // DEVPKEY_Device_IsConnected ({83da6326-97a6-4088-9453-a1923f573b29}, 15)
                     uint propType;
                     byte[] connBuf = new byte[8];
                     uint reqSize;
+                    bool nodeHasExplicitConnProp = false;
                     bool nodeIsConnected = false;
 
                     if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyIsConnected, out propType, connBuf, (uint)connBuf.Length, out reqSize, 0) && reqSize > 0)
                     {
+                        nodeHasExplicitConnProp = true;
                         if (connBuf[0] != 0)
                             nodeIsConnected = true;
                     }
 
-                    byte[] statusBuf = new byte[8];
-                    if (Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyDevNodeStatus, out propType, statusBuf, (uint)statusBuf.Length, out reqSize, 0) && reqSize >= 4)
-                    {
-                        uint status = BitConverter.ToUInt32(statusBuf, 0);
-                        // DN_STARTED = 0x08, DN_HAS_PROBLEM = 0x400
-                        if ((status & 0x00000008) != 0 && (status & 0x00000400) == 0)
-                        {
-                            nodeIsConnected = true;
-                        }
-                    }
-
-                    // Lê bateria nativa se disponível
+                    // Lê bateria nativa se disponível (ATENÇÃO: Windows armazena este valor em cache de conexões anteriores!)
                     byte[] batBuf = new byte[64];
                     bool hasBattery = Win32Api.SetupDiGetDevicePropertyW(hDevInfo, ref devData, ref keyBattery, out propType, batBuf, (uint)batBuf.Length, out reqSize, 0) && reqSize > 0;
                     int batVal = hasBattery ? (int)batBuf[0] : -1;
@@ -189,8 +181,11 @@ namespace OmniBattery.Protocols
                         candidates[mac] = cand;
                     }
 
-                    if (nodeIsConnected)
+                    // Marca como conectado SOMENTE se o DEVPKEY_Device_IsConnected explícito for verdadeiro
+                    if (nodeHasExplicitConnProp && nodeIsConnected)
+                    {
                         cand.IsConnected = true;
+                    }
 
                     if (!cand.Names.Contains(devName))
                         cand.Names.Add(devName);
@@ -199,7 +194,7 @@ namespace OmniBattery.Protocols
                     {
                         cand.BestBattery = batVal;
                         cand.HasRealBattery = true;
-                        cand.IsConnected = true;
+                        // NUNCA fazer cand.IsConnected = true aqui, pois Windows mantém a bateria no cache do registro mesmo desligado!
                     }
 
                     DeviceCategory cat = CategorizeDevice(devName, instId);
@@ -237,17 +232,15 @@ namespace OmniBattery.Protocols
                 if (IsBlacklistedProduct(bestName))
                     continue;
 
-                // Para fones de ouvido / headsets: verifica se o endpoint de áudio está ativo no Windows
+                // Para fones de ouvido / headsets: se a propriedade PnP não marcou conectado,
+                // confere se há endpoint de áudio ativo no subsistema de som do Windows
                 if (category == DeviceCategory.FoneDeOuvido && !cand.IsConnected)
                 {
                     string lowerBest = bestName.ToLowerInvariant();
                     foreach (string activeAudio in activeAudioDevices)
                     {
-                        if (activeAudio.Contains(lowerBest) ||
-                            (lowerBest.Contains("jbl") && activeAudio.Contains("jbl")) ||
-                            (lowerBest.Contains("ugreen") && activeAudio.Contains("ugreen")) ||
-                            (lowerBest.Contains("sony") && activeAudio.Contains("sony")) ||
-                            (lowerBest.Contains("airpod") && activeAudio.Contains("airpod")))
+                        if (string.IsNullOrEmpty(activeAudio)) continue;
+                        if (activeAudio.Contains(lowerBest) || lowerBest.Contains(activeAudio))
                         {
                             cand.IsConnected = true;
                             break;
@@ -255,8 +248,8 @@ namespace OmniBattery.Protocols
                     }
                 }
 
-                // REGRA ESTRITA DO USUÁRIO: Somente dispositivos ligados no momento aparecem!
-                // Se o dispositivo estiver desligado ou desconectado, não adiciona aos ativos
+                // REGRA ESTRITA DO USUÁRIO: Somente dispositivos ligados e conectados no momento aparecem!
+                // Se o dispositivo estiver desligado ou desconectado, descarta
                 if (!cand.IsConnected)
                 {
                     continue;

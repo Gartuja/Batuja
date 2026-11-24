@@ -238,7 +238,20 @@ namespace OmniBattery.Core
             _settings.SetDeviceHidden(device.DeviceKey, hidden);
             _settings.SetDeviceHidden(device.Name, hidden);
 
-            PerformScan();
+            List<BatteryDevice> updatedList;
+            lock (_lock)
+            {
+                if (hidden)
+                {
+                    _cachedDevices.RemoveAll(d => (d.DeviceKey == device.DeviceKey || d.Name == device.Name));
+                }
+                updatedList = new List<BatteryDevice>(_cachedDevices);
+            }
+
+            if (DevicesUpdated != null)
+                DevicesUpdated(updatedList);
+
+            TriggerScanAsync();
         }
 
         public void SetDeviceConnected(BatteryDevice device, bool connected)
@@ -349,6 +362,23 @@ namespace OmniBattery.Core
                                     dev.Category != DeviceCategory.FoneDeOuvido)
                                 {
                                     continue;
+                                }
+
+                                // REGRA DO USUÁRIO: MoniTuja monitora exclusivamente dispositivos SEM FIO!
+                                // Dispositivos conectados diretamente por cabo USB (IsWired) ou sem bateria não entram
+                                if (dev.IsWired || !dev.HasBattery)
+                                {
+                                    continue;
+                                }
+
+                                // Se o dispositivo sem fio não retornou telemetria instantânea, recupera a última carga conhecida do histórico
+                                if (dev.BatteryPercent < 0)
+                                {
+                                    var hist = _history.GetAll().Find(h => h.Key == dev.DeviceKey || h.Name == dev.Name);
+                                    if (hist != null && hist.LastBatteryPercent >= 0)
+                                    {
+                                        dev.BatteryPercent = hist.LastBatteryPercent;
+                                    }
                                 }
 
                                 // Check if user hid or turned off this device

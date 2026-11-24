@@ -47,6 +47,13 @@ namespace OmniBattery.Models
             get
             {
                 string appDir = AppDomain.CurrentDomain.BaseDirectory;
+                try
+                {
+                    string exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    if (!string.IsNullOrEmpty(exeDir) && Directory.Exists(exeDir))
+                        appDir = exeDir;
+                }
+                catch { }
                 return Path.Combine(appDir, "settings.ini");
             }
         }

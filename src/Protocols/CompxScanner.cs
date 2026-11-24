@@ -437,47 +437,42 @@ namespace OmniBattery.Protocols
             // Identifica se é comprovadamente um dispositivo sem fio (2.4GHz Dongle / Bluetooth)
             bool isExplicitlyWireless = false;
 
-            // Modelos conhecidos do usuário que são SEM FIO:
-            if (group.VendorId == 0x3837 || // MCHOSE V9 Turbo (Headset Sem Fio)
-                group.VendorId == 0x3554 || // Attack Shark RS6 Ultra (Mouse Sem Fio)
-                group.VendorId == 0x1A34 || // Attack Shark Dongle Secundário (Sem Fio)
-                group.VendorId == 0x374A)   // VK 87 Max V2 (Teclado Sem Fio)
+            // Dongles conhecidos do usuário que são receptores sem fio 2.4G:
+            if (group.VendorId == 0x3837 || // MCHOSE V9 Turbo (Receptor Dongle Sem Fio)
+                group.VendorId == 0x3554 || // Attack Shark RS6 Ultra (Receptor Dongle Sem Fio)
+                group.VendorId == 0x1A34)   // Attack Shark Dongle Secundário (Sem Fio)
             {
                 isExplicitlyWireless = true;
             }
 
-            string combinedText = (friendlyName + " " + group.ProductString + " " + protocolName).ToLowerInvariant();
-            if (combinedText.Contains("wireless") || combinedText.Contains("2.4g") || combinedText.Contains("sem fio") ||
-                combinedText.Contains("dongle") || combinedText.Contains("receiver") || combinedText.Contains("transceiver") ||
-                combinedText.Contains("bluetooth") || combinedText.Contains("lightspeed") || combinedText.Contains("hyperspeed") ||
-                combinedText.Contains("dual magnetic") || combinedText.Contains("valkyrie") || combinedText.Contains("mchose") ||
-                combinedText.Contains("attack shark") || combinedText.Contains("turbo"))
+            string descText = (friendlyName + " " + (group.ProductString ?? "")).ToLowerInvariant();
+            if (descText.Contains("wireless") || descText.Contains("2.4g") || descText.Contains("sem fio") ||
+                descText.Contains("dongle") || descText.Contains("receiver") || descText.Contains("transceiver") ||
+                descText.Contains("lightspeed") || descText.Contains("hyperspeed") ||
+                descText.Contains("dual magnetic"))
             {
                 isExplicitlyWireless = true;
             }
 
-            if (detectedBattery > 0)
+            if (detectedBattery > 0 && detectedBattery <= 100)
             {
                 isExplicitlyWireless = true;
             }
 
             bool isDevConnected = true;
             bool isWired = false;
-            bool hasBattery = true;
+            bool hasBattery = false;
 
             if (isExplicitlyWireless)
             {
                 isWired = false;
                 hasBattery = true;
-                if (detectedBattery < 0)
-                {
-                    // Dispositivo sem fio conectado aguardando telemetria detalhada
-                    detectedBattery = 90;
-                }
+                // Se detectedBattery foi obtido via telemetria direta, mantém; caso contrário permanece -1
+                // para o BatteryManager preencher com a última carga conhecida do histórico sem inventar números
             }
             else
             {
-                // Dispositivo USB convencional sem fio/bateria (ex: teclado gamer USB convencional cabeado)
+                // Dispositivo conectado diretamente via cabo USB (ex: VK 87 no cabo, ou teclados exclusivamente USB sem bateria)
                 isWired = true;
                 hasBattery = false;
                 detectedBattery = -1;
@@ -634,7 +629,7 @@ namespace OmniBattery.Protocols
             if (group.VendorId == 0x3554)
                 return "Compx 2.4G / Dual Magnetic";
             if (group.VendorId == 0x374A)
-                return "Valkyrie VK Wireless HID";
+                return "Valkyrie HID";
             if (group.VendorId == 0x258A)
                 return "SinoWealth 2.4G";
 

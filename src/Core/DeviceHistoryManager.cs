@@ -32,6 +32,13 @@ namespace OmniBattery.Core
             get
             {
                 string dir = AppDomain.CurrentDomain.BaseDirectory;
+                try
+                {
+                    string exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    if (!string.IsNullOrEmpty(exeDir) && Directory.Exists(exeDir))
+                        dir = exeDir;
+                }
+                catch { }
                 return Path.Combine(dir, "history.ini");
             }
         }
