@@ -488,6 +488,8 @@ namespace OmniBattery.Core
 
                         if (LowBatteryAlert != null)
                             LowBatteryAlert(dev, msg);
+
+                        SoundAlertManager.PlaySound(_settings.LowBatterySound);
                     }
                 }
             }

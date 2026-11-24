@@ -15,14 +15,24 @@ namespace OmniBattery.Models
         Minimalista  // just the number, no background box
     }
 
+    public enum LowBatterySoundType
+    {
+        BipRetro,       // Bip Retrô (8-Bit)
+        SinoSuave,      // Sino Suave (Chime)
+        AlertaGamer,    // Alerta Gamer (Eletrônico)
+        RadarPixel,     // Radar Pixel (Sonar)
+        Desativado      // Sem Som / Silencioso
+    }
+
     public class AppSettings
     {
-        public const string AppVersion = "v1.2.3";
+        public const string AppVersion = "v1.2.4";
         public const string GitHubRepoUrl = "https://github.com/Gartuja/Batuja";
 
         public int RefreshIntervalSeconds { get; set; }
         public int LowBatteryThreshold { get; set; }
         public bool EnableNotifications { get; set; }
+        public LowBatterySoundType LowBatterySound { get; set; }
         public bool StartWithWindows { get; set; }
         public bool MinimizeToTrayOnClose { get; set; }
         public bool ShowSystemBattery { get; set; }
@@ -63,6 +73,7 @@ namespace OmniBattery.Models
             RefreshIntervalSeconds = 30;
             LowBatteryThreshold = 20;
             EnableNotifications = true;
+            LowBatterySound = LowBatterySoundType.BipRetro;
             StartWithWindows = false;
             MinimizeToTrayOnClose = true;
             ShowSystemBattery = false;
@@ -295,6 +306,11 @@ namespace OmniBattery.Models
                             if (bool.TryParse(val, out en))
                                 settings.EnableNotifications = en;
                             break;
+                        case "lowbatterysound":
+                            LowBatterySoundType lbs;
+                            if (Enum.TryParse(val, true, out lbs))
+                                settings.LowBatterySound = lbs;
+                            break;
                         case "startwithwindows":
                             bool sw;
                             if (bool.TryParse(val, out sw))
@@ -379,6 +395,7 @@ namespace OmniBattery.Models
                 sb.AppendLine(string.Format("RefreshIntervalSeconds={0}", RefreshIntervalSeconds));
                 sb.AppendLine(string.Format("LowBatteryThreshold={0}", LowBatteryThreshold));
                 sb.AppendLine(string.Format("EnableNotifications={0}", EnableNotifications));
+                sb.AppendLine(string.Format("LowBatterySound={0}", LowBatterySound));
                 sb.AppendLine(string.Format("StartWithWindows={0}", StartWithWindows));
                 sb.AppendLine(string.Format("MinimizeToTrayOnClose={0}", MinimizeToTrayOnClose));
                 sb.AppendLine(string.Format("ShowSystemBattery={0}", ShowSystemBattery));

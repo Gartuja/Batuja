@@ -67,16 +67,34 @@ Write-Host "Iniciando compilação nativa com .NET Framework..." -ForegroundColo
 $ProgressPreference = "SilentlyContinue"
 if ($LASTEXITCODE -eq 0 -and (Test-Path $outputExe)) {
     Copy-Item -Path $outputExe -Destination $legacyExe -Force
-    $zipPath = Join-Path $PSScriptRoot "MoniTuja.zip"
-    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-    Compress-Archive -Path $outputExe -DestinationPath $zipPath -Force
+
+    # Extrai a versão atual configurada no código-fonte
+    $appSettingsFile = Join-Path $PSScriptRoot "src\Models\AppSettings.cs"
+    $appVer = "v1.2.4"
+    if (Test-Path $appSettingsFile) {
+        $content = Get-Content $appSettingsFile -Raw
+        if ($content -match 'AppVersion\s*=\s*"([^"]+)"') {
+            $appVer = $matches[1]
+        }
+    }
+
+    # Gera o zip genérico e o zip nomeado com versão (MoniTuja-v1.2.4.zip)
+    $zipGeneric = Join-Path $PSScriptRoot "MoniTuja.zip"
+    $zipVersioned = Join-Path $PSScriptRoot "MoniTuja-$appVer.zip"
+
+    if (Test-Path $zipGeneric) { Remove-Item $zipGeneric -Force }
+    if (Test-Path $zipVersioned) { Remove-Item $zipVersioned -Force }
+
+    Compress-Archive -Path $outputExe -DestinationPath $zipGeneric -Force
+    Copy-Item -Path $zipGeneric -Destination $zipVersioned -Force
 
     $sizeKb = [Math]::Round((Get-Item $outputExe).Length / 1KB, 2)
     Write-Host "=========================================" -ForegroundColor Green
     Write-Host "  COMPILAÇÃO CONCLUÍDA COM SUCESSO!      " -ForegroundColor Green
     Write-Host "  Executável gerado: MoniTuja.exe        " -ForegroundColor Green
     Write-Host "  Cópia de compatibilidade: Batuja.exe   " -ForegroundColor Green
-    Write-Host "  Pacote ZIP para envio: MoniTuja.zip    " -ForegroundColor Green
+    Write-Host "  Pacote ZIP genérico: MoniTuja.zip      " -ForegroundColor Green
+    Write-Host "  Pacote ZIP versionado: MoniTuja-$appVer.zip" -ForegroundColor Green
     Write-Host "  Tamanho do binário: $sizeKb KB         " -ForegroundColor Green
     Write-Host "=========================================" -ForegroundColor Green
 } else {

@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Threading;
 using System.Windows.Forms;
 using OmniBattery.Core;
 using OmniBattery.Models;
@@ -84,6 +86,13 @@ namespace OmniBattery.UI
             {
                 _overlayForm.ShowOverlay();
             }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            // Verifica automaticamente no GitHub se há uma nova versão disponível ao abrir
+            CheckForUpdatesAsync(true, null, null, this);
         }
 
         private void OnOverlayStateChanged(bool isVisible)
@@ -1184,7 +1193,7 @@ namespace OmniBattery.UI
             using (Form sf = new Form())
             {
                 sf.Text = I18n.T("SettingsTitle");
-                sf.Size = new Size(430, 540);
+                sf.Size = new Size(430, 620);
                 sf.StartPosition = FormStartPosition.CenterParent;
                 sf.FormBorderStyle = FormBorderStyle.FixedDialog;
                 sf.MaximizeBox = false; sf.MinimizeBox = false;
@@ -1214,6 +1223,35 @@ namespace OmniBattery.UI
 
                 CheckBox chkSys = new CheckBox { Text = I18n.T("ShowSysBatLabel"), Checked = _manager.Settings.ShowSystemBattery, Location = new Point(20, y), AutoSize = true, ForeColor = Color.White };
                 sf.Controls.Add(chkSys); y += 32;
+
+                // Som de alerta de bateria fraca
+                Label lblSound = new Label { Text = "Toque de Alerta de Bateria Fraca:", Location = new Point(20, y), AutoSize = true, ForeColor = Color.White };
+                sf.Controls.Add(lblSound); y += 22;
+
+                ComboBox cmbSound = new ComboBox
+                {
+                    Location = new Point(20, y), Width = 230,
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    BackColor = Color.FromArgb(40, 43, 48), ForeColor = Color.White
+                };
+                LowBatterySoundType[] soundTypes = (LowBatterySoundType[])Enum.GetValues(typeof(LowBatterySoundType));
+                foreach (LowBatterySoundType st in soundTypes)
+                    cmbSound.Items.Add(SoundAlertManager.GetSoundLabel(st));
+                cmbSound.SelectedIndex = Array.IndexOf(soundTypes, _manager.Settings.LowBatterySound);
+                sf.Controls.Add(cmbSound);
+
+                AeroGlassButton btnTestSound = CreateStyledButton("► Ouvir Toque", Color.FromArgb(60, 65, 75));
+                btnTestSound.Location = new Point(260, y - 1);
+                btnTestSound.Size = new Size(130, 26);
+                btnTestSound.Click += delegate
+                {
+                    if (cmbSound.SelectedIndex >= 0)
+                    {
+                        LowBatterySoundType selectedSound = soundTypes[cmbSound.SelectedIndex];
+                        SoundAlertManager.PlaySound(selectedSound);
+                    }
+                };
+                sf.Controls.Add(btnTestSound); y += 34;
 
                 Label lblStyle = new Label { Text = I18n.T("TrayStyleLabel"), Location = new Point(20, y), AutoSize = true, ForeColor = Color.White };
                 sf.Controls.Add(lblStyle); y += 24;
@@ -1277,114 +1315,7 @@ namespace OmniBattery.UI
                 {
                     btnCheckUpdate.Enabled = false;
                     lblUpdateStatus.Text = I18n.T("CheckingUpdates");
-                    System.Threading.ThreadPool.QueueUserWorkItem(delegate
-                    {
-                        try
-                        {
-                            System.Net.ServicePointManager.SecurityProtocol = (System.Net.SecurityProtocolType)3072 // Tls12
-                                | (System.Net.SecurityProtocolType)768 // Tls11
-                                | (System.Net.SecurityProtocolType)192; // Tls
-                            string tag = "";
-
-                            using (System.Net.WebClient wc = new System.Net.WebClient())
-                            {
-                                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
-                                wc.Headers.Add("Accept", "application/vnd.github.v3+json");
-
-                                // 1. Tenta obter a release mais recente no GitHub
-                                try
-                                {
-                                    string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
-                                    int tagIdx = json.IndexOf("\"tag_name\":");
-                                    if (tagIdx >= 0)
-                                    {
-                                        int startQuote = json.IndexOf('"', tagIdx + 11);
-                                        if (startQuote >= 0)
-                                        {
-                                            int endQuote = json.IndexOf('"', startQuote + 1);
-                                            if (endQuote > startQuote)
-                                                tag = json.Substring(startQuote + 1, endQuote - startQuote - 1);
-                                        }
-                                    }
-                                }
-                                catch (System.Net.WebException) { }
-
-                                // 2. Tenta ler a versão diretamente do repositório no GitHub (imune a rate limits de API)
-                                if (string.IsNullOrEmpty(tag))
-                                {
-                                    try
-                                    {
-                                        wc.Headers.Clear();
-                                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
-                                        string rawContent = wc.DownloadString("https://raw.githubusercontent.com/Gartuja/Batuja/main/src/Models/AppSettings.cs");
-                                        int vIdx = rawContent.IndexOf("AppVersion = \"");
-                                        if (vIdx >= 0)
-                                        {
-                                            int start = vIdx + 14;
-                                            int end = rawContent.IndexOf('"', start);
-                                            if (end > start)
-                                                tag = rawContent.Substring(start, end - start);
-                                        }
-                                    }
-                                    catch { }
-                                }
-
-                                // 3. Caso não haja releases formais, verifica tags do repositório
-                                if (string.IsNullOrEmpty(tag))
-                                {
-                                    try
-                                    {
-                                        wc.Headers.Clear();
-                                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
-                                        wc.Headers.Add("Accept", "application/vnd.github.v3+json");
-                                        string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/tags");
-                                        int nameIdx = tagsJson.IndexOf("\"name\":");
-                                        if (nameIdx >= 0)
-                                        {
-                                            int startQuote = tagsJson.IndexOf('"', nameIdx + 7);
-                                            if (startQuote >= 0)
-                                            {
-                                                int endQuote = tagsJson.IndexOf('"', startQuote + 1);
-                                                if (endQuote > startQuote)
-                                                    tag = tagsJson.Substring(startQuote + 1, endQuote - startQuote - 1);
-                                            }
-                                        }
-                                    }
-                                    catch (System.Net.WebException) { }
-                                }
-
-                                sf.BeginInvoke(new Action(delegate
-                                {
-                                    btnCheckUpdate.Enabled = true;
-                                    if (!string.IsNullOrEmpty(tag) &&
-                                        !tag.Equals(AppSettings.AppVersion, StringComparison.OrdinalIgnoreCase) &&
-                                        !tag.Equals(AppSettings.AppVersion.TrimStart('v', 'V'), StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        lblUpdateStatus.Text = string.Format("Nova versão disponível: {0}", tag);
-                                        if (MessageBox.Show(sf, I18n.T("UpdateAvailableMsg", tag), I18n.T("UpdateTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                                        {
-                                            try { Process.Start(AppSettings.GitHubRepoUrl + "/releases"); } catch { }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        string currentVer = !string.IsNullOrEmpty(tag) ? tag : AppSettings.AppVersion;
-                                        lblUpdateStatus.Text = string.Format("MoniTuja {0} é a versão mais recente.", currentVer);
-                                        MessageBox.Show(sf, string.Format("Você já está na versão mais recente ({0}).\nNenhuma atualização necessária.", currentVer), I18n.T("UpdateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    }
-                                }));
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            sf.BeginInvoke(new Action(delegate
-                            {
-                                btnCheckUpdate.Enabled = true;
-                                lblUpdateStatus.Text = "Erro ao verificar atualizações.";
-                                MessageBox.Show(sf, "Não foi possível verificar atualizações no momento.\nVerifique sua conexão à internet.\n(" + ex.Message + ")", I18n.T("UpdateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            }));
-                        }
-                    });
+                    CheckForUpdatesAsync(false, lblUpdateStatus, btnCheckUpdate, sf);
                 };
 
                 AeroGlassButton btnSave = CreateStyledButton(I18n.T("BtnSave"), Color.FromArgb(70, 74, 82));
@@ -1396,6 +1327,11 @@ namespace OmniBattery.UI
                     _manager.Settings.EnableNotifications = chkNotif.Checked;
                     _manager.Settings.StartWithWindows = chkBoot.Checked;
                     _manager.Settings.ShowSystemBattery = chkSys.Checked;
+
+                    if (cmbSound.SelectedIndex >= 0)
+                    {
+                        _manager.Settings.LowBatterySound = soundTypes[cmbSound.SelectedIndex];
+                    }
 
                     if (cmbLang.SelectedIndex >= 0)
                     {
@@ -1420,6 +1356,169 @@ namespace OmniBattery.UI
 
                 sf.ShowDialog(this);
             }
+        }
+
+        private void CheckForUpdatesAsync(bool silentIfLatest, Label statusLabel = null, Button checkButton = null, Form parentForm = null)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 // Tls12
+                        | (SecurityProtocolType)768 // Tls11
+                        | (SecurityProtocolType)192; // Tls
+                    string tag = "";
+
+                    using (WebClient wc = new WebClient())
+                    {
+                        wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
+                        wc.Headers.Add("Accept", "application/vnd.github.v3+json");
+
+                        // 1. Tenta obter a release mais recente no GitHub
+                        try
+                        {
+                            string json = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/releases/latest");
+                            int tagIdx = json.IndexOf("\"tag_name\":");
+                            if (tagIdx >= 0)
+                            {
+                                int startQuote = json.IndexOf('"', tagIdx + 11);
+                                if (startQuote >= 0)
+                                {
+                                    int endQuote = json.IndexOf('"', startQuote + 1);
+                                    if (endQuote > startQuote)
+                                        tag = json.Substring(startQuote + 1, endQuote - startQuote - 1);
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // 2. Tenta ler a versão diretamente do repositório no GitHub (imune a rate limits de API)
+                        if (string.IsNullOrEmpty(tag))
+                        {
+                            try
+                            {
+                                wc.Headers.Clear();
+                                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
+                                string rawContent = wc.DownloadString("https://raw.githubusercontent.com/Gartuja/Batuja/main/src/Models/AppSettings.cs");
+                                int vIdx = rawContent.IndexOf("AppVersion = \"");
+                                if (vIdx >= 0)
+                                {
+                                    int start = vIdx + 14;
+                                    int end = rawContent.IndexOf('"', start);
+                                    if (end > start)
+                                        tag = rawContent.Substring(start, end - start);
+                                }
+                            }
+                            catch { }
+                        }
+
+                        // 3. Caso não haja releases formais, verifica tags do repositório
+                        if (string.IsNullOrEmpty(tag))
+                        {
+                            try
+                            {
+                                wc.Headers.Clear();
+                                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MoniTuja/" + AppSettings.AppVersion);
+                                wc.Headers.Add("Accept", "application/vnd.github.v3+json");
+                                string tagsJson = wc.DownloadString("https://api.github.com/repos/Gartuja/Batuja/tags");
+                                int nameIdx = tagsJson.IndexOf("\"name\":");
+                                if (nameIdx >= 0)
+                                {
+                                    int startQuote = tagsJson.IndexOf('"', nameIdx + 7);
+                                    if (startQuote >= 0)
+                                    {
+                                        int endQuote = tagsJson.IndexOf('"', startQuote + 1);
+                                        if (endQuote > startQuote)
+                                            tag = tagsJson.Substring(startQuote + 1, endQuote - startQuote - 1);
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+
+                        Form owner = parentForm ?? this;
+                        if (owner == null || owner.IsDisposed || !owner.IsHandleCreated) return;
+
+                        owner.BeginInvoke(new Action(delegate
+                        {
+                            if (checkButton != null) checkButton.Enabled = true;
+
+                            bool isNewer = IsNewerVersion(tag, AppSettings.AppVersion);
+                            if (isNewer)
+                            {
+                                if (statusLabel != null)
+                                    statusLabel.Text = string.Format("Nova versão disponível: {0}", tag);
+
+                                string msg = string.Format(
+                                    "Uma nova versão ({0}) do MoniTuja está disponível no GitHub!\nSua versão atual: {1}\n\nDeseja abrir a página do GitHub para baixar a atualização agora?",
+                                    tag, AppSettings.AppVersion);
+
+                                if (MessageBox.Show(owner, msg, "MoniTuja - Nova Versão Disponível", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                                {
+                                    try { Process.Start(AppSettings.GitHubRepoUrl + "/releases"); } catch { }
+                                }
+                            }
+                            else
+                            {
+                                if (!silentIfLatest)
+                                {
+                                    string currentVer = !string.IsNullOrEmpty(tag) ? tag : AppSettings.AppVersion;
+                                    if (statusLabel != null)
+                                        statusLabel.Text = string.Format("MoniTuja {0} é a versão mais recente.", currentVer);
+
+                                    MessageBox.Show(owner, string.Format("Você já está na versão mais recente ({0}).\nNenhuma atualização necessária.", currentVer), "MoniTuja - Atualizações", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                            }
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Form owner = parentForm ?? this;
+                    if (owner == null || owner.IsDisposed || !owner.IsHandleCreated) return;
+                    owner.BeginInvoke(new Action(delegate
+                    {
+                        if (checkButton != null) checkButton.Enabled = true;
+                        if (!silentIfLatest)
+                        {
+                            if (statusLabel != null) statusLabel.Text = "Erro ao verificar atualizações.";
+                            MessageBox.Show(owner, "Não foi possível verificar atualizações no momento.\nVerifique sua conexão à internet.\n(" + ex.Message + ")", "MoniTuja - Atualizações", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }));
+                }
+            });
+        }
+
+        private static bool IsNewerVersion(string remoteTag, string currentVer)
+        {
+            if (string.IsNullOrEmpty(remoteTag) || string.IsNullOrEmpty(currentVer)) return false;
+
+            string rClean = remoteTag.Trim().TrimStart('v', 'V');
+            string cClean = currentVer.Trim().TrimStart('v', 'V');
+
+            try
+            {
+                Version rVer, cVer;
+                if (Version.TryParse(rClean, out rVer) && Version.TryParse(cClean, out cVer))
+                {
+                    return rVer > cVer;
+                }
+
+                string[] rParts = rClean.Split('.', '-');
+                string[] cParts = cClean.Split('.', '-');
+                for (int i = 0; i < Math.Min(rParts.Length, cParts.Length); i++)
+                {
+                    int rNum, cNum;
+                    if (int.TryParse(rParts[i], out rNum) && int.TryParse(cParts[i], out cNum))
+                    {
+                        if (rNum > cNum) return true;
+                        if (rNum < cNum) return false;
+                    }
+                }
+            }
+            catch { }
+
+            return !remoteTag.Equals(currentVer, StringComparison.OrdinalIgnoreCase);
         }
 
         // ─────────────────────────── Helpers ──────────────────────────────────

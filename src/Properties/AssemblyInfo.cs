@@ -20,7 +20,7 @@ using System.Resources;
 [assembly: Guid("7a419c8d-fa18-4b95-a2e1-456cb019ef2a")]
 
 // Versão da montagem
-[assembly: AssemblyVersion("1.2.3.0")]
-[assembly: AssemblyFileVersion("1.2.3.0")]
-[assembly: AssemblyInformationalVersion("1.2.3")]
+[assembly: AssemblyVersion("1.2.4.0")]
+[assembly: AssemblyFileVersion("1.2.4.0")]
+[assembly: AssemblyInformationalVersion("1.2.4")]
 [assembly: NeutralResourcesLanguage("pt-BR")]
