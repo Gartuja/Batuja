@@ -141,40 +141,49 @@ namespace OmniBattery.UI
             if (_classic3D)
             {
                 Rectangle r = new Rectangle(0, 0, Width, Height);
-                Color faceColor = Color.FromArgb(192, 192, 192);
+                Color faceColor = (_baseColor.IsEmpty || _baseColor == Color.Transparent)
+                    ? Color.FromArgb(70, 74, 82)
+                    : _baseColor;
+
                 using (SolidBrush b = new SolidBrush(faceColor))
                     g.FillRectangle(b, r);
 
-                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
-                using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
-                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-                using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
+                bool isDark = (faceColor.R < 130);
+                Color cHighlight = isDark ? Color.FromArgb(120, 126, 138) : Color.FromArgb(255, 255, 255);
+                Color cLight     = isDark ? Color.FromArgb(95, 100, 110)  : Color.FromArgb(223, 223, 223);
+                Color cShadow    = isDark ? Color.FromArgb(22, 24, 28)    : Color.FromArgb(128, 128, 128);
+                Color cDark      = isDark ? Color.FromArgb(14, 15, 18)    : Color.FromArgb(0, 0, 0);
+
+                using (Pen pHi = new Pen(cHighlight))
+                using (Pen pLi = new Pen(cLight))
+                using (Pen pSh = new Pen(cShadow))
+                using (Pen pDk = new Pen(cDark))
                 {
                     if (_isPressed)
                     {
-                        g.DrawLine(pBlack, r.Left, r.Top, r.Right - 1, r.Top);
-                        g.DrawLine(pBlack, r.Left, r.Top, r.Left, r.Bottom - 1);
-                        g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
-                        g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+                        g.DrawLine(pDk, r.Left, r.Top, r.Right - 1, r.Top);
+                        g.DrawLine(pDk, r.Left, r.Top, r.Left, r.Bottom - 1);
+                        g.DrawLine(pSh, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                        g.DrawLine(pSh, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
 
-                        g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                        g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pHi, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pHi, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
                     }
                     else
                     {
-                        g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
-                        g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
-                        g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
-                        g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+                        g.DrawLine(pHi, r.Left, r.Top, r.Right - 1, r.Top);
+                        g.DrawLine(pHi, r.Left, r.Top, r.Left, r.Bottom - 1);
+                        g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                        g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
 
-                        g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                        g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
-                        g.DrawLine(pDark, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
-                        g.DrawLine(pDark, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                        g.DrawLine(pDk, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pDk, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                        g.DrawLine(pSh, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                        g.DrawLine(pSh, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
                     }
                 }
 
-                Color textColor = !Enabled ? Color.FromArgb(128, 128, 128) : Color.Black;
+                Color textColor = !Enabled ? Color.FromArgb(128, 128, 128) : ForeColor;
                 float offsetY = _isPressed ? 1f : 0f;
                 float offsetX = _isPressed ? 1f : 0f;
 

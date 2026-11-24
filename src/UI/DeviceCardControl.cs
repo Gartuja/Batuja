@@ -40,7 +40,7 @@ namespace OmniBattery.UI
                      ControlStyles.UserPaint |
                      ControlStyles.ResizeRedraw, true);
 
-            Size = new Size(300, 146);
+            Size = new Size(320, 150);
             Margin = new Padding(6);
             Cursor = Cursors.Default;
 
@@ -202,35 +202,35 @@ namespace OmniBattery.UI
             g.SmoothingMode = SmoothingMode.None; // Pixel-sharp retro aesthetic
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Color cGrey = Color.FromArgb(192, 192, 192);
+            Color cDarkGrey = Color.FromArgb(62, 66, 73);
             Rectangle cardRect = new Rectangle(0, 0, Width - 1, Height - 1);
             Color effectiveColor = _device != null ? _device.GetEffectiveColor() : Color.FromArgb(0, 240, 255);
             bool isConn = _device != null && _device.IsConnected;
 
-            // 1. Fundo cinza clássico e Borda 3D em relevo (Raised Bevel)
-            using (SolidBrush b = new SolidBrush(cGrey))
+            // 1. Fundo cinza escuro retrô e Borda 3D em relevo (Raised Bevel)
+            using (SolidBrush b = new SolidBrush(cDarkGrey))
                 g.FillRectangle(b, cardRect);
             Draw3DRaised(g, cardRect, 2);
 
             if (_device == null) return;
 
             // ── 2. Topo Direito: Botão Fechar [x] e Status [Ícone Ligado] ─────
-            _btnHideRect = new Rectangle(cardRect.Right - 16, cardRect.Top + 6, 12, 12);
+            _btnHideRect = new Rectangle(cardRect.Right - 18, cardRect.Top + 6, 12, 12);
             DrawClassicButton(g, _btnHideRect, "x", _isHideHovered, false);
 
             int btnStatusW = 78;
             int btnStatusH = 16;
-            _btnStatusRect = new Rectangle(_btnHideRect.Left - btnStatusW - 4, cardRect.Top + 6, btnStatusW, btnStatusH);
+            _btnStatusRect = new Rectangle(_btnHideRect.Left - btnStatusW - 6, cardRect.Top + 6, btnStatusW, btnStatusH);
 
             bool trayOn = _device.IsTrayIconEnabled;
             string statusLabel = trayOn ? I18n.T("IconOn") : I18n.T("IconOff");
             string cleanLabel = statusLabel.TrimStart('●', '○', ' ').Trim();
 
             // Pílula / Caixa verde clássica com contorno preto fino
-            Color stBg = trayOn ? Color.FromArgb(34, 197, 94) : Color.FromArgb(180, 180, 180);
+            Color stBg = trayOn ? Color.FromArgb(34, 197, 94) : Color.FromArgb(120, 125, 135);
             using (SolidBrush sb = new SolidBrush(stBg))
                 g.FillRectangle(sb, _btnStatusRect);
-            using (Pen sp = new Pen(Color.Black, 1f))
+            using (Pen sp = new Pen(Color.FromArgb(20, 22, 26), 1f))
                 g.DrawRectangle(sp, _btnStatusRect);
 
             using (Font stFont = new Font("Tahoma", 7.5f, FontStyle.Regular))
@@ -240,52 +240,53 @@ namespace OmniBattery.UI
                 g.DrawString(cleanLabel, stFont, tb, _btnStatusRect, sf);
             }
 
-            // ── 3. Ícone em Caixa Rebaixada (Sunken 3D Box) ────────────────────
+            // ── 3. Ícone em Caixa Rebaixada Escura (Sunken 3D Box) ────────────
             int iconSz = 40;
             _iconCircleRect = new Rectangle(cardRect.X + 8, cardRect.Y + 8, iconSz, iconSz);
-            using (SolidBrush ib = new SolidBrush(cGrey))
+            using (SolidBrush ib = new SolidBrush(Color.FromArgb(40, 43, 48)))
                 g.FillRectangle(ib, _iconCircleRect);
             Draw3DSunken(g, _iconCircleRect);
 
             IconRenderer.DrawDeviceIcon(g, _iconCircleRect,
-                _device.EffectiveCategory, Color.Black, _device.CustomIconPath);
+                _device.EffectiveCategory, effectiveColor, _device.CustomIconPath);
 
             // ── 4. Nome do Dispositivo ──────────────────────────────────────────
             int txtLeft = cardRect.X + 54;
-            Rectangle nameRect = new Rectangle(txtLeft, cardRect.Y + 7, _btnStatusRect.Left - txtLeft - 4, 18);
-            using (Font nf = new Font("Tahoma", 10f, FontStyle.Bold))
+            Rectangle nameRect = new Rectangle(txtLeft, cardRect.Y + 7, _btnStatusRect.Left - txtLeft - 6, 18);
+            using (Font nf = new Font("Tahoma", 9.5f, FontStyle.Bold))
             {
                 StringFormat sf = new StringFormat
                 {
                     Trimming = StringTrimming.EllipsisCharacter,
                     FormatFlags = StringFormatFlags.NoWrap
                 };
-                Color nameColor = isConn ? Color.Black : Color.FromArgb(100, 100, 100);
+                Color nameColor = isConn ? Color.White : Color.FromArgb(160, 165, 175);
                 using (SolidBrush nb = new SolidBrush(nameColor))
                     g.DrawString(_device.Name, nf, nb, nameRect, sf);
             }
 
             // ── 5. Segunda Linha: Protocolo e Botões [Ícone] e [Cor] ───────────
-            int row2Y = cardRect.Y + 26;
+            int row2Y = cardRect.Y + 27;
             string proto = _device.Protocol;
+
+            // Botões clássicos 3D de Ícone e Cor posicionados à direita
+            string iconBtnText = I18n.T("BtnIcon");
+            string colorBtnText = I18n.T("BtnColor");
+
+            _btnIconRect  = new Rectangle(cardRect.Right - 104, row2Y, 44, 18);
+            _btnColorRect = new Rectangle(_btnIconRect.Right + 5, row2Y, 46, 18);
+
             using (Font pf = new Font("Tahoma", 7.5f, FontStyle.Regular))
             {
-                Rectangle protoRect = new Rectangle(txtLeft, row2Y + 2, 115, 16);
+                int maxProtoW = Math.Max(50, _btnIconRect.Left - txtLeft - 6);
+                Rectangle protoRect = new Rectangle(txtLeft, row2Y + 2, maxProtoW, 16);
                 StringFormat psf = new StringFormat
                 {
                     Trimming = StringTrimming.EllipsisCharacter,
                     FormatFlags = StringFormatFlags.NoWrap
                 };
-                g.DrawString(proto, pf, Brushes.Black, protoRect, psf);
+                g.DrawString(proto, pf, Brushes.White, protoRect, psf);
             }
-
-            // Botões clássicos 3D de Ícone e Cor
-            int bLeft = cardRect.Left + 175;
-            string iconBtnText = I18n.T("BtnIcon");
-            string colorBtnText = I18n.T("BtnColor");
-
-            _btnIconRect  = new Rectangle(bLeft, row2Y, 44, 18);
-            _btnColorRect = new Rectangle(_btnIconRect.Right + 5, row2Y, 46, 18);
 
             DrawClassicButton(g, _btnIconRect,  iconBtnText,  _isIconHovered,  false);
             DrawClassicButton(g, _btnColorRect, " " + colorBtnText, _isColorHovered, false);
@@ -298,13 +299,13 @@ namespace OmniBattery.UI
 
             // ── 6. Barra de Bateria Estilo Medidor de LED / VU-Meter Retro ─────
             int barX = cardRect.X + 8;
-            int barY = cardRect.Y + 56;
-            int barW = cardRect.Width - 92;
-            int barH = 25;
+            int barY = cardRect.Y + 55;
+            int barW = cardRect.Width - 110;
+            int barH = 26;
             Rectangle gaugeRect = new Rectangle(barX, barY, barW, barH);
 
             // Canaleta preta rebaixada clássica
-            using (SolidBrush b = new SolidBrush(Color.Black))
+            using (SolidBrush b = new SolidBrush(Color.FromArgb(16, 18, 22)))
                 g.FillRectangle(b, gaugeRect);
             Draw3DSunken(g, gaugeRect);
 
@@ -333,19 +334,26 @@ namespace OmniBattery.UI
                         }
                         else
                         {
-                            using (SolidBrush sb = new SolidBrush(Color.FromArgb(20, 20, 20)))
+                            using (SolidBrush sb = new SolidBrush(Color.FromArgb(28, 30, 36)))
                                 g.FillRectangle(sb, bRect);
                         }
                     }
                 }
 
-                // Porcentagem da bateria em 19pt Bold preto
+                // Porcentagem da bateria em 15.5pt Bold branco alinhada perfeitamente à direita
                 string pct = _device.GetFormattedPercentage();
                 if (!string.IsNullOrEmpty(pct))
                 {
-                    using (Font pctFont = new Font("Tahoma", 19f, FontStyle.Bold))
+                    Rectangle pctRect = new Rectangle(cardRect.Right - 98, cardRect.Y + 53, 90, 28);
+                    using (Font pctFont = new Font("Tahoma", 15.5f, FontStyle.Bold))
                     {
-                        g.DrawString(pct, pctFont, Brushes.Black, cardRect.Right - 78, cardRect.Y + 52);
+                        StringFormat psf = new StringFormat
+                        {
+                            Alignment = StringAlignment.Far,
+                            LineAlignment = StringAlignment.Center,
+                            FormatFlags = StringFormatFlags.NoWrap
+                        };
+                        g.DrawString(pct, pctFont, Brushes.White, pctRect, psf);
                     }
                 }
             }
@@ -356,9 +364,16 @@ namespace OmniBattery.UI
                 {
                     g.DrawString("⚡ " + I18n.T("WiredDeviceNotice"), wf, Brushes.Cyan, barX + 6, barY + 5);
                 }
-                using (Font pctFont = new Font("Tahoma", 17f, FontStyle.Bold))
+                Rectangle pctRect = new Rectangle(cardRect.Right - 98, cardRect.Y + 53, 90, 28);
+                using (Font pctFont = new Font("Tahoma", 15f, FontStyle.Bold))
                 {
-                    g.DrawString("USB", pctFont, Brushes.Black, cardRect.Right - 76, cardRect.Y + 53);
+                    StringFormat psf = new StringFormat
+                    {
+                        Alignment = StringAlignment.Far,
+                        LineAlignment = StringAlignment.Center,
+                        FormatFlags = StringFormatFlags.NoWrap
+                    };
+                    g.DrawString("USB", pctFont, Brushes.White, pctRect, psf);
                 }
             }
 
@@ -386,95 +401,128 @@ namespace OmniBattery.UI
 
             using (Font inf = new Font("Tahoma", 7.5f, FontStyle.Regular))
             {
-                Color infoColor = isConn ? Color.Black : Color.FromArgb(100, 100, 100);
+                Color infoColor = isConn ? Color.FromArgb(200, 205, 215) : Color.FromArgb(140, 145, 155);
+                Rectangle footRect = new Rectangle(cardRect.X + 8, cardRect.Bottom - 20, cardRect.Width - 16, 16);
+                StringFormat fsf = new StringFormat
+                {
+                    Trimming = StringTrimming.EllipsisCharacter,
+                    FormatFlags = StringFormatFlags.NoWrap
+                };
                 using (SolidBrush ib = new SolidBrush(infoColor))
-                    g.DrawString(info, inf, ib, cardRect.X + 8, cardRect.Bottom - 18);
+                    g.DrawString(info, inf, ib, footRect, fsf);
             }
         }
 
         private static void Draw3DRaised(Graphics g, Rectangle r, int depth = 2)
         {
-            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
-            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
-            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
+            Color cHi = Color.FromArgb(115, 122, 134);
+            Color cLi = Color.FromArgb(90, 96, 108);
+            Color cSh = Color.FromArgb(25, 27, 32);
+            Color cDk = Color.FromArgb(14, 15, 18);
+
+            using (Pen pHi = new Pen(cHi))
+            using (Pen pLi = new Pen(cLi))
+            using (Pen pSh = new Pen(cSh))
+            using (Pen pDk = new Pen(cDk))
             {
                 if (depth == 1)
                 {
-                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
-                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
-                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pHi, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pHi, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pDk, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pDk, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
                 }
                 else
                 {
-                    g.DrawLine(pWhite, r.Left, r.Top, r.Right - 1, r.Top);
-                    g.DrawLine(pWhite, r.Left, r.Top, r.Left, r.Bottom - 1);
-                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
-                    g.DrawLine(pLight, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+                    g.DrawLine(pHi, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pHi, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
 
-                    g.DrawLine(pBlack, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                    g.DrawLine(pBlack, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
-                    g.DrawLine(pDark, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
-                    g.DrawLine(pDark, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                    g.DrawLine(pDk, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pDk, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pSh, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                    g.DrawLine(pSh, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
                 }
             }
         }
 
         private static void Draw3DSunken(Graphics g, Rectangle r)
         {
-            using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
-            using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
-            using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-            using (Pen pLight = new Pen(Color.FromArgb(223, 223, 223)))
-            {
-                g.DrawLine(pDark, r.Left, r.Top, r.Right - 1, r.Top);
-                g.DrawLine(pDark, r.Left, r.Top, r.Left, r.Bottom - 1);
-                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
-                g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+            Color cHi = Color.FromArgb(115, 122, 134);
+            Color cLi = Color.FromArgb(90, 96, 108);
+            Color cSh = Color.FromArgb(25, 27, 32);
+            Color cDk = Color.FromArgb(14, 15, 18);
 
-                g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
-                g.DrawLine(pLight, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
-                g.DrawLine(pLight, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+            using (Pen pHi = new Pen(cHi))
+            using (Pen pLi = new Pen(cLi))
+            using (Pen pSh = new Pen(cSh))
+            using (Pen pDk = new Pen(cDk))
+            {
+                g.DrawLine(pSh, r.Left, r.Top, r.Right - 1, r.Top);
+                g.DrawLine(pSh, r.Left, r.Top, r.Left, r.Bottom - 1);
+                g.DrawLine(pDk, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                g.DrawLine(pDk, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                g.DrawLine(pHi, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pHi, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pLi, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                g.DrawLine(pLi, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
             }
         }
 
         private static void DrawClassicButton(Graphics g, Rectangle r, string text, bool pressed = false, bool focused = false)
         {
-            using (SolidBrush b = new SolidBrush(Color.FromArgb(192, 192, 192)))
+            Color faceColor = Color.FromArgb(70, 74, 82);
+            using (SolidBrush b = new SolidBrush(faceColor))
                 g.FillRectangle(b, r);
+
+            Color cHi = Color.FromArgb(115, 122, 134);
+            Color cLi = Color.FromArgb(90, 96, 108);
+            Color cSh = Color.FromArgb(25, 27, 32);
+            Color cDk = Color.FromArgb(14, 15, 18);
 
             if (pressed)
             {
-                using (Pen pBlack = new Pen(Color.FromArgb(0, 0, 0)))
-                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                using (Pen pDk = new Pen(cDk))
+                using (Pen pSh = new Pen(cSh))
+                using (Pen pHi = new Pen(cHi))
                 {
-                    g.DrawLine(pBlack, r.Left, r.Top, r.Right - 1, r.Top);
-                    g.DrawLine(pBlack, r.Left, r.Top, r.Left, r.Bottom - 1);
-                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
-                    g.DrawLine(pDark, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+                    g.DrawLine(pDk, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pDk, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pSh, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pSh, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
 
-                    g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
-                    g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pHi, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pHi, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
                 }
             }
             else
             {
-                Draw3DRaised(g, r, 2);
+                using (Pen pHi = new Pen(cHi))
+                using (Pen pLi = new Pen(cLi))
+                using (Pen pDk = new Pen(cDk))
+                using (Pen pSh = new Pen(cSh))
+                {
+                    g.DrawLine(pHi, r.Left, r.Top, r.Right - 1, r.Top);
+                    g.DrawLine(pHi, r.Left, r.Top, r.Left, r.Bottom - 1);
+                    g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
+                    g.DrawLine(pLi, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
+
+                    g.DrawLine(pDk, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pDk, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                    g.DrawLine(pSh, r.Right - 2, r.Top + 1, r.Right - 2, r.Bottom - 2);
+                    g.DrawLine(pSh, r.Left + 1, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                }
             }
 
             int off = pressed ? 1 : 0;
-            using (Font f = new Font("Tahoma", 7.5f, FontStyle.Regular))
-            using (SolidBrush tb = new SolidBrush(Color.Black))
+            Rectangle txtR = new Rectangle(r.X + off, r.Y + off, r.Width, r.Height);
+            using (Font bf = new Font("Tahoma", 7.5f, FontStyle.Regular))
+            using (SolidBrush tb = new SolidBrush(Color.White))
             {
-                StringFormat sf = new StringFormat
-                {
-                    Alignment = StringAlignment.Center,
-                    LineAlignment = StringAlignment.Center
-                };
-                g.DrawString(text, f, tb, new Rectangle(r.X + off, r.Y + off, r.Width, r.Height), sf);
+                StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(text, bf, tb, txtR, sf);
             }
         }
     }

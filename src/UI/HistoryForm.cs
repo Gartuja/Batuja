@@ -26,8 +26,8 @@ namespace OmniBattery.UI
             Size = new Size(640, 520);
             MinimumSize = new Size(540, 400);
             StartPosition = FormStartPosition.CenterParent;
-            BackColor = Color.FromArgb(192, 192, 192);
-            ForeColor = Color.Black;
+            BackColor = Color.FromArgb(54, 57, 63);
+            ForeColor = Color.White;
             Font = new Font("Tahoma", 8.5f);
             DoubleBuffered = true;
 
@@ -76,18 +76,18 @@ namespace OmniBattery.UI
             // Header
             _headerPanel = new Panel
             {
-                BackColor = Color.FromArgb(192, 192, 192),
+                BackColor = Color.FromArgb(54, 57, 63),
                 Padding = new Padding(18, 10, 18, 10)
             };
             _headerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
                 int sepY = _headerPanel.Height - 2;
-                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                using (Pen pDark = new Pen(Color.FromArgb(24, 26, 30)))
+                using (Pen pLight = new Pen(Color.FromArgb(80, 85, 96)))
                 {
                     g.DrawLine(pDark, 0, sepY, _headerPanel.Width, sepY);
-                    g.DrawLine(pWhite, 0, sepY + 1, _headerPanel.Width, sepY + 1);
+                    g.DrawLine(pLight, 0, sepY + 1, _headerPanel.Width, sepY + 1);
                 }
             };
 
@@ -95,7 +95,7 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("HistoryTitle"),
                 Font = new Font("Tahoma", 11.5f, FontStyle.Bold),
-                ForeColor = Color.Black,
+                ForeColor = Color.White,
                 AutoSize = true,
                 Location = new Point(14, 10)
             };
@@ -105,7 +105,7 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("HistorySubtitle"),
                 Font = new Font("Tahoma", 8f),
-                ForeColor = Color.Black,
+                ForeColor = Color.FromArgb(186, 192, 205),
                 AutoSize = true,
                 Location = new Point(15, 34)
             };
@@ -115,8 +115,8 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("ClearHistory"),
                 Font = new Font("Tahoma", 8.25f),
-                ForeColor = Color.Black,
-                BaseGlassColor = Color.FromArgb(192, 192, 192),
+                ForeColor = Color.White,
+                BaseGlassColor = Color.FromArgb(70, 74, 82),
                 Classic3D = true,
                 CornerRadius = 0,
                 Size = new Size(116, 24),
@@ -138,17 +138,17 @@ namespace OmniBattery.UI
             // Footer
             _footerPanel = new Panel
             {
-                BackColor = Color.FromArgb(192, 192, 192),
+                BackColor = Color.FromArgb(54, 57, 63),
                 Padding = new Padding(16, 6, 16, 6)
             };
             _footerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
-                using (Pen pDark = new Pen(Color.FromArgb(128, 128, 128)))
-                using (Pen pWhite = new Pen(Color.FromArgb(255, 255, 255)))
+                using (Pen pDark = new Pen(Color.FromArgb(24, 26, 30)))
+                using (Pen pLight = new Pen(Color.FromArgb(80, 85, 96)))
                 {
                     g.DrawLine(pDark, 0, 0, _footerPanel.Width, 0);
-                    g.DrawLine(pWhite, 0, 1, _footerPanel.Width, 1);
+                    g.DrawLine(pLight, 0, 1, _footerPanel.Width, 1);
                 }
             };
 
@@ -156,7 +156,7 @@ namespace OmniBattery.UI
             {
                 Text = "",
                 Font = new Font("Tahoma", 8f),
-                ForeColor = Color.Black,
+                ForeColor = Color.FromArgb(200, 205, 215),
                 AutoSize = true,
                 Location = new Point(16, 12)
             };
@@ -166,8 +166,8 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("Close"),
                 Font = new Font("Tahoma", 8.25f),
-                ForeColor = Color.Black,
-                BaseGlassColor = Color.FromArgb(192, 192, 192),
+                ForeColor = Color.White,
+                BaseGlassColor = Color.FromArgb(70, 74, 82),
                 Classic3D = true,
                 CornerRadius = 0,
                 Size = new Size(80, 24),
@@ -182,7 +182,7 @@ namespace OmniBattery.UI
             _itemsPanel = new Panel
             {
                 AutoScroll = true,
-                BackColor = Color.FromArgb(192, 192, 192),
+                BackColor = Color.FromArgb(54, 57, 63),
                 Padding = new Padding(14)
             };
 
@@ -217,7 +217,7 @@ namespace OmniBattery.UI
                 {
                     Text = "Nenhum histórico registrado ainda.\nConecte um dispositivo sem fio para registrar.",
                     Font = new Font("Tahoma", 9f),
-                    ForeColor = Color.FromArgb(80, 80, 80),
+                    ForeColor = Color.FromArgb(160, 168, 180),
                     TextAlign = ContentAlignment.MiddleCenter,
                     AutoSize = false,
                     Size = new Size(cardW, 120),
@@ -248,7 +248,7 @@ namespace OmniBattery.UI
             Panel p = new Panel
             {
                 Size = new Size(width, 74),
-                BackColor = Color.FromArgb(192, 192, 192),
+                BackColor = Color.FromArgb(62, 66, 73),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -264,14 +264,14 @@ namespace OmniBattery.UI
             {
                 Size = new Size(42, 42),
                 Location = new Point(14, 16),
-                BackColor = Color.FromArgb(192, 192, 192)
+                BackColor = Color.FromArgb(46, 49, 54)
             };
             pbIcon.Paint += delegate(object s, PaintEventArgs pe)
             {
                 Graphics g = pe.Graphics;
                 Rectangle r = new Rectangle(0, 0, 41, 41);
                 Draw3DSunken(g, r);
-                IconRenderer.DrawDeviceIcon(g, r, item.Category, Color.Black, null);
+                IconRenderer.DrawDeviceIcon(g, r, item.Category, Color.FromArgb(220, 225, 235), null);
             };
             p.Controls.Add(pbIcon);
 
@@ -280,7 +280,7 @@ namespace OmniBattery.UI
             {
                 Text = item.Name,
                 Font = new Font("Tahoma", 9.5f, FontStyle.Bold),
-                ForeColor = Color.Black,
+                ForeColor = Color.White,
                 AutoSize = true,
                 Location = new Point(66, 12)
             };
@@ -294,7 +294,7 @@ namespace OmniBattery.UI
             {
                 Text = sub,
                 Font = new Font("Tahoma", 8f),
-                ForeColor = Color.Black,
+                ForeColor = Color.FromArgb(186, 192, 205),
                 AutoSize = true,
                 Location = new Point(67, 34)
             };
@@ -305,7 +305,7 @@ namespace OmniBattery.UI
             {
                 Text = I18n.T("LastSeen", string.Format("{0:dd/MM HH:mm:ss}", item.LastSeen)),
                 Font = new Font("Tahoma", 7.5f),
-                ForeColor = Color.FromArgb(90, 90, 90),
+                ForeColor = Color.FromArgb(150, 156, 168),
                 AutoSize = true,
                 Location = new Point(67, 52)
             };
@@ -316,7 +316,7 @@ namespace OmniBattery.UI
             {
                 Text = isLive ? ("● " + I18n.T("ConnectedStatus")) : ("○ " + I18n.T("DisconnectedStatus")),
                 Font = new Font("Tahoma", 8.5f, isLive ? FontStyle.Bold : FontStyle.Regular),
-                ForeColor = isLive ? Color.FromArgb(0, 128, 0) : Color.FromArgb(90, 90, 90),
+                ForeColor = isLive ? Color.FromArgb(70, 220, 120) : Color.FromArgb(150, 156, 168),
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Location = new Point(p.Width - 130, 26)
@@ -328,13 +328,13 @@ namespace OmniBattery.UI
 
         private static void Draw3DRaised(Graphics g, Rectangle r, int depth = 2)
         {
-            Color cWhite = Color.FromArgb(255, 255, 255);
-            Color cDark = Color.FromArgb(128, 128, 128);
-            Color cBlack = Color.FromArgb(0, 0, 0);
+            Color cWhite = Color.FromArgb(120, 126, 138);
+            Color cDark = Color.FromArgb(28, 30, 34);
+            Color cBlack = Color.FromArgb(18, 20, 23);
 
             for (int i = 0; i < depth; i++)
             {
-                Color topCol = (i == 0) ? cWhite : Color.FromArgb(223, 223, 223);
+                Color topCol = (i == 0) ? cWhite : Color.FromArgb(92, 98, 108);
                 Color botCol = (i == 0) ? cBlack : cDark;
 
                 using (Pen pTop = new Pen(topCol))
@@ -352,9 +352,9 @@ namespace OmniBattery.UI
 
         private static void Draw3DSunken(Graphics g, Rectangle r)
         {
-            Color cWhite = Color.FromArgb(255, 255, 255);
-            Color cDark = Color.FromArgb(128, 128, 128);
-            Color cBlack = Color.FromArgb(0, 0, 0);
+            Color cLight = Color.FromArgb(90, 95, 105);
+            Color cDark = Color.FromArgb(28, 30, 34);
+            Color cBlack = Color.FromArgb(16, 18, 21);
 
             using (Pen pDark = new Pen(cDark))
             {
@@ -366,10 +366,10 @@ namespace OmniBattery.UI
                 g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Right - 2, r.Top + 1);
                 g.DrawLine(pBlack, r.Left + 1, r.Top + 1, r.Left + 1, r.Bottom - 2);
             }
-            using (Pen pWhite = new Pen(cWhite))
+            using (Pen pLightPen = new Pen(cLight))
             {
-                g.DrawLine(pWhite, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
-                g.DrawLine(pWhite, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pLightPen, r.Left, r.Bottom - 1, r.Right - 1, r.Bottom - 1);
+                g.DrawLine(pLightPen, r.Right - 1, r.Top, r.Right - 1, r.Bottom - 1);
             }
         }
 
