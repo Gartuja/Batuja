@@ -32,7 +32,9 @@ namespace OmniBattery.UI
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(14, 16, 22);
+            Color keyColor = Color.FromArgb(14, 16, 22);
+            BackColor = keyColor;
+            TransparencyKey = keyColor;
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9f);
             DoubleBuffered = true;
@@ -238,24 +240,22 @@ namespace OmniBattery.UI
 
             if (!isVert)
             {
-                // Layout Horizontal Ultracompacto Gamer
-                // Para 1 dispositivo: largura ~68px, altura 28px
-                // Para múltiplos: 56px por dispositivo + margens
-                int itemW = 56;
-                int totalW = (_devices.Count <= 1) ? 68 : (count * itemW + 12);
-                int totalH = 28;
+                // Layout Horizontal Espaçoso e Elegante
+                int itemW = 92;
+                int totalW = count * itemW + 12;
+                int totalH = 40;
                 Size = new Size(totalW, totalH);
             }
             else
             {
-                // Layout Vertical Compacto
-                int itemH = 28;
-                int totalW = 68;
-                int totalH = Math.Max(28, count * itemH + 4);
+                // Layout Vertical Espaçoso
+                int itemH = 38;
+                int totalW = 104;
+                int totalH = count * itemH + 12;
                 Size = new Size(totalW, totalH);
             }
 
-            _closeBtnRect = new Rectangle(Width - 14, 2, 12, 12);
+            _closeBtnRect = new Rectangle(Width - 16, 2, 14, 14);
             Invalidate();
         }
 
@@ -357,7 +357,7 @@ namespace OmniBattery.UI
             }
         }
 
-        // ── Paint HUD Minimalista Gamer ─────────────────────────────────────
+        // ── Paint HUD Minimalista Gamer (Transparente) ─────────────────────
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -365,29 +365,39 @@ namespace OmniBattery.UI
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            int radius = Math.Min(12, Height / 2);
+            // Fundo transparente via TransparencyKey
+            g.Clear(Color.FromArgb(14, 16, 22));
 
-            // 1. Fundo Pílula Translúcida Dark
-            using (GraphicsPath bgp = RoundedRect(rect, radius))
+            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            int radius = 10;
+
+            // Ao passar o mouse, desenha um contorno sutil suave para facilitar arrastar e localizar
+            if (_isHovered)
             {
-                using (SolidBrush bb = new SolidBrush(Color.FromArgb(195, 12, 14, 20)))
-                    g.FillPath(bb, bgp);
-                using (Pen bp = new Pen(Color.FromArgb(55, 255, 255, 255), 1f))
-                    g.DrawPath(bp, bgp);
+                using (GraphicsPath bgp = RoundedRect(rect, radius))
+                {
+                    using (SolidBrush bb = new SolidBrush(Color.FromArgb(80, 20, 24, 32)))
+                        g.FillPath(bb, bgp);
+                    using (Pen bp = new Pen(Color.FromArgb(90, 255, 255, 255), 1.2f))
+                        g.DrawPath(bp, bgp);
+                }
             }
 
             // 2. Dispositivos (Ícone + % Bateria)
             if (_devices.Count == 0)
             {
                 // Estado sem dispositivos ativos
-                Rectangle iconR = new Rectangle(8, 6, 16, 16);
-                IconRenderer.DrawDeviceIcon(g, iconR, DeviceCategory.Generico, Color.FromArgb(140, 145, 165), null);
+                Rectangle iconR = new Rectangle(8, (Height - 32) / 2, 36, 32);
+                IconRenderer.DrawDeviceIcon(g, iconR, DeviceCategory.Generico, Color.FromArgb(160, 165, 180), null);
 
-                using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
-                using (SolidBrush pb = new SolidBrush(Color.FromArgb(140, 145, 165)))
+                using (Font pf = new Font("Segoe UI", 11.5f, FontStyle.Bold))
+                using (SolidBrush shadow = new SolidBrush(Color.Black))
+                using (SolidBrush pb = new SolidBrush(Color.FromArgb(160, 165, 180)))
                 {
-                    g.DrawString("--", pf, pb, 28, 5);
+                    int tx = 48;
+                    int ty = (Height - 22) / 2;
+                    g.DrawString("--", pf, shadow, tx + 1, ty + 1);
+                    g.DrawString("--", pf, pb, tx, ty);
                 }
             }
             else
@@ -397,16 +407,16 @@ namespace OmniBattery.UI
                 if (!isVert)
                 {
                     // Horizontal
-                    int curX = (_devices.Count == 1) ? 7 : 6;
-                    int itemW = (_devices.Count == 1) ? 54 : 54;
+                    int curX = 6;
+                    int itemW = 92;
 
                     for (int i = 0; i < _devices.Count; i++)
                     {
                         BatteryDevice dev = _devices[i];
                         Color effCol = dev.GetEffectiveColor();
 
-                        // Ícone do dispositivo
-                        Rectangle iconRect = new Rectangle(curX, (Height - 16) / 2, 16, 16);
+                        // Ícone do dispositivo em caixa de 36x32 (sem cortes)
+                        Rectangle iconRect = new Rectangle(curX, (Height - 32) / 2, 36, 32);
                         IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
 
                         // Texto de Bateria / USB
@@ -426,37 +436,46 @@ namespace OmniBattery.UI
                                 txtColor = effCol;
                         }
 
-                        using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
+                        using (Font pf = new Font("Segoe UI", 11.5f, FontStyle.Bold))
+                        using (SolidBrush shadow = new SolidBrush(Color.Black))
                         using (SolidBrush pb = new SolidBrush(txtColor))
                         {
-                            g.DrawString(txt, pf, pb, curX + 18, (Height - 17) / 2);
+                            int tx = curX + 38;
+                            int ty = (Height - 22) / 2;
+                            // Contorno de 1px preto para nitidez sobre jogos e vídeos
+                            g.DrawString(txt, pf, shadow, tx + 1, ty + 1);
+                            g.DrawString(txt, pf, shadow, tx - 1, ty - 1);
+                            g.DrawString(txt, pf, shadow, tx + 1, ty - 1);
+                            g.DrawString(txt, pf, shadow, tx - 1, ty + 1);
+                            g.DrawString(txt, pf, pb, tx, ty);
                         }
 
                         // Divisor sutil entre múltiplos dispositivos
                         if (i < _devices.Count - 1)
                         {
-                            using (Pen dp = new Pen(Color.FromArgb(45, 255, 255, 255), 1f))
+                            using (Pen dp = new Pen(Color.FromArgb(70, 255, 255, 255), 1f))
                             {
-                                int sepX = curX + itemW;
-                                g.DrawLine(dp, sepX, 5, sepX, Height - 6);
+                                int sepX = curX + itemW - 4;
+                                g.DrawLine(dp, sepX, 8, sepX, Height - 9);
                             }
                         }
 
-                        curX += itemW + 4;
+                        curX += itemW;
                     }
                 }
                 else
                 {
                     // Vertical
-                    int curY = 4;
-                    int itemH = 28;
+                    int curY = 6;
+                    int itemH = 38;
 
                     for (int i = 0; i < _devices.Count; i++)
                     {
                         BatteryDevice dev = _devices[i];
                         Color effCol = dev.GetEffectiveColor();
 
-                        Rectangle iconRect = new Rectangle(8, curY + 6, 16, 16);
+                        // Ícone do dispositivo em caixa de 36x32 (sem cortes)
+                        Rectangle iconRect = new Rectangle(8, curY + 3, 36, 32);
                         IconRenderer.DrawDeviceIcon(g, iconRect, dev.EffectiveCategory, effCol, dev.CustomIconPath);
 
                         string txt;
@@ -475,10 +494,18 @@ namespace OmniBattery.UI
                                 txtColor = effCol;
                         }
 
-                        using (Font pf = new Font("Segoe UI", 9.5f, FontStyle.Bold))
+                        using (Font pf = new Font("Segoe UI", 11.5f, FontStyle.Bold))
+                        using (SolidBrush shadow = new SolidBrush(Color.Black))
                         using (SolidBrush pb = new SolidBrush(txtColor))
                         {
-                            g.DrawString(txt, pf, pb, 28, curY + 5);
+                            int tx = 48;
+                            int ty = curY + 8;
+                            // Contorno de 1px preto para nitidez sobre jogos e vídeos
+                            g.DrawString(txt, pf, shadow, tx + 1, ty + 1);
+                            g.DrawString(txt, pf, shadow, tx - 1, ty - 1);
+                            g.DrawString(txt, pf, shadow, tx + 1, ty - 1);
+                            g.DrawString(txt, pf, shadow, tx - 1, ty + 1);
+                            g.DrawString(txt, pf, pb, tx, ty);
                         }
 
                         curY += itemH;
@@ -489,9 +516,9 @@ namespace OmniBattery.UI
             // 3. Botão Fechar [x] sutil somente ao passar o mouse
             if (_isHovered)
             {
-                using (Font xf = new Font("Segoe UI", 7.5f, FontStyle.Bold))
+                using (Font xf = new Font("Segoe UI", 8f, FontStyle.Bold))
                 {
-                    Color xc = _isCloseHovered ? Color.FromArgb(255, 100, 100) : Color.FromArgb(130, 135, 160);
+                    Color xc = _isCloseHovered ? Color.FromArgb(255, 100, 100) : Color.FromArgb(180, 185, 200);
                     using (SolidBrush xb = new SolidBrush(xc))
                     {
                         g.DrawString("×", xf, xb, _closeBtnRect.X, _closeBtnRect.Y - 1);
