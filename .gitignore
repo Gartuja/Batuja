@@ -3,6 +3,10 @@
 scratch/
 procs.txt
 
+# Executáveis e arquivos compactados
+*.exe
+*.zip
+
 # Visual Studio / compiler temporary artifacts
 *.pdb
 *.suo
