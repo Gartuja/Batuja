@@ -1,4 +1,4 @@
-# 🖱️ Batuja - Monitor de Dispositivos sem Fio
+# 🖱️ Monituja - Monitor de Dispositivos sem Fio
 
 Aplicativo projetado para monitorar a porcentagem de bateria dos seus dispositivos sem fio.
 
