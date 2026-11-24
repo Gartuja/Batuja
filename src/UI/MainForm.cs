@@ -193,6 +193,15 @@ namespace OmniBattery.UI
                 BackColor = Color.FromArgb(0, 0, 128),
                 Height = 22
             };
+            try
+            {
+                typeof(Panel).InvokeMember("DoubleBuffered",
+                    System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                    null, _titleBarPanel, new object[] { true });
+            }
+            catch { }
+            _titleBarPanel.Resize += delegate { _titleBarPanel.Invalidate(); };
+
             _titleBarPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
@@ -204,19 +213,11 @@ namespace OmniBattery.UI
                 using (LinearGradientBrush lgb = new LinearGradientBrush(gradRect, Color.FromArgb(0, 0, 128), Color.FromArgb(16, 132, 208), 0f))
                     g.FillRectangle(lgb, gradRect);
 
-                // Pequeno ícone do lobo fofinho na esquerda
-                try
-                {
-                    Rectangle iconBox = new Rectangle(5, 4, 14, 14);
-                    AppIconRenderer.Draw(g, iconBox);
-                }
-                catch { }
-
-                // Título da janela com versão dinâmica
+                // Título da janela com versão dinâmica (sem ícone no topo)
                 using (Font tf = new Font("Tahoma", 8.5f, FontStyle.Bold))
                 {
                     string titleText = string.Format("Monitor de Dispositivos sem Fio {0}", AppSettings.AppVersion);
-                    g.DrawString(titleText, tf, Brushes.White, 23, 4);
+                    g.DrawString(titleText, tf, Brushes.White, 8, 4);
                 }
 
                 // Botões clássicos de janela: _ □ X com relevo 3D
@@ -546,7 +547,10 @@ namespace OmniBattery.UI
             if (cw <= 0 || ch <= 0) return;
 
             if (_titleBarPanel != null)
+            {
                 _titleBarPanel.SetBounds(0, 0, cw, TITLE_H);
+                _titleBarPanel.Invalidate();
+            }
 
             _headerPanel.SetBounds(0, TITLE_H, cw, HEADER_H);
 
